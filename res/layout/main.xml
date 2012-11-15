@@ -39,7 +39,7 @@
       android:textSize="18dp"
       android:gravity="center"
       android:singleLine="true"
-      android:text="@string/init_cloudeo_label"
+      android:text="@string/init_label"
 
       />
 

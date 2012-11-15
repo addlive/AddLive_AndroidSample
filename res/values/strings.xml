@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <resources>
-  <string name="app_name">CDO Sample App</string>
+  <string name="app_name">AddLive Sample</string>
 
   <string name="default_room">174.127.76.179:443/room1</string>
 
@@ -30,7 +30,7 @@
 
   <string name="agc_prompt">AGC:</string>
   <string name="sdk_version_label">SDK Version: </string>
-  <string name="init_cloudeo_label">Initializing Cloudeo ...</string>
+  <string name="init_label">Initializing Platform ...</string>
 
   <string-array name="agc_arrays">
     <item>Disabled</item>

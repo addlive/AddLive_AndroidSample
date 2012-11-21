@@ -22,9 +22,7 @@ import com.addlive.service.listener.*;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class AddLiveSampleApp extends Activity {
   private static final long CDO_SAMPLES_APP_ID = 1;
@@ -195,20 +193,29 @@ public class AddLiveSampleApp extends Activity {
 
   private void initializeActions() {
     // 1. Initialize all the button actions
-    findViewById(R.id.button_connect).setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        onConnectClicked();
-      }
-    });
+    findViewById(R.id.button_connect).setOnClickListener(
+        new View.OnClickListener() {
+          @Override
+          public void onClick(View view) {
+            onConnectClicked();
+          }
+        });
 
-    findViewById(R.id.button_disconnect).
-        setOnClickListener(new View.OnClickListener() {
+    findViewById(R.id.button_disconnect).setOnClickListener(
+        new View.OnClickListener() {
           @Override
           public void onClick(View view) {
             onDisconnectClicked();
           }
         });
+
+    findViewById(R.id.button_logs).
+        setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        onLogsClicked();
+      }
+    });
 
     // 2. Initialize the spinners (selects)
     Spinner ec = (Spinner) findViewById(R.id.spinner_ec);
@@ -382,6 +389,16 @@ public class AddLiveSampleApp extends Activity {
 
     disconnect.setVisibility(View.GONE);
   }
+
+  private void onLogsClicked() {
+    Log.d(LOG_TAG, "Gathering logs");
+    LogsPublisher publisher = new LogsPublisher();
+    List<String> filter = new LinkedList<String>();
+    filter.add(LOG_TAG + ":V");
+    filter.add("*:S");
+    publisher.run(filter, this);
+  }
+
 
   /**
    * ===========================================================================

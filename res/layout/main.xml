@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	      android:id="@+id/main_layout"
-	      android:orientation="vertical"
-	      android:layout_width="fill_parent"
-	      android:layout_height="fill_parent"
-	      android:layout_marginLeft="5dip"
-	      android:layout_marginRight="5dip"
-	      android:layout_marginTop="5dip"
-	      android:layout_marginBottom="5dip"
-	      >
+              android:id="@+id/main_layout"
+              android:orientation="vertical"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+              android:layout_marginLeft="5dip"
+              android:layout_marginRight="5dip"
+              android:layout_marginTop="5dip"
+              android:layout_marginBottom="5dip"
+    >
 
 
   <TextView
@@ -26,7 +26,7 @@
       android:gravity="left"
       android:singleLine="true"
       android:text="@string/sdk_version_label"/>
-<TextView
+  <TextView
       android:id="@+id/text_status"
       android:layout_marginTop="5dp"
       android:layout_marginBottom="5dp"
@@ -48,7 +48,6 @@
       android:text="@string/default_room"
       android:layout_marginTop="5dp"
       android:layout_marginBottom="5dp"
-      android:layout_below="@id/text_status"
       android:layout_width="fill_parent"
       android:layout_height="30dp"
       android:cursorVisible="true"
@@ -65,7 +64,6 @@
       android:id="@+id/text_stats"
       android:layout_marginTop="5dp"
       android:layout_marginBottom="5dp"
-      android:layout_below="@id/edit_url"
       android:layout_width="fill_parent"
       android:layout_height="25dip"
       android:textColor="#FFFFFF"
@@ -73,126 +71,125 @@
       android:textSize="13dp"
       android:gravity="center"
       android:singleLine="true"
-      android:text="Uplink Stats"
+      android:text="@string/up_stats_label"
       />
 
   <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		android:id="@+id/spinner_layout1"
-		android:orientation="horizontal"
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:layout_marginLeft="5dip"
-		android:layout_marginRight="5dip"
-		android:layout_marginTop="5dip"
-		android:layout_marginBottom="5dip"
-		android:layout_below="@id/text_stats"
-		>
+                android:id="@+id/spinner_layout1"
+                android:orientation="horizontal"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dip"
+                android:layout_marginRight="5dip"
+                android:layout_marginTop="5dip"
+                android:layout_marginBottom="5dip"
+      >
     <TextView
-	android:id="@+id/prompt_ec"
-	android:text="@string/ec_prompt"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:typeface="monospace"
-	android:textColor="#FFFFFF"
-	android:textStyle="bold"
-	android:layout_weight="2"
-	android:gravity="right|center_vertical"
-	/>
+        android:id="@+id/prompt_ec"
+        android:text="@string/ec_prompt"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:typeface="monospace"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_weight="2"
+        android:gravity="right|center_vertical"
+        />
     <Spinner
-	android:id="@+id/spinner_ec"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:entries="@array/ec_arrays"
-	android:typeface="monospace"
-	android:textColor="#FFFFFF"
-	android:layout_weight="1"
-	android:gravity="center"
-	/>
+        android:id="@+id/spinner_ec"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:entries="@array/ec_arrays"
+        android:typeface="monospace"
+        android:textColor="#FFFFFF"
+        android:layout_weight="1"
+        android:gravity="center"
+        />
   </LinearLayout>
 
   <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		android:id="@+id/spinner_layout2"
-		android:orientation="horizontal"
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:layout_marginLeft="5dip"
-		android:layout_marginRight="5dip"
-		android:layout_marginTop="5dip"
-		android:layout_marginBottom="5dip"
-		android:layout_below="@id/spinner_layout1"
-		>
+                android:id="@+id/spinner_layout2"
+                android:orientation="horizontal"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dip"
+                android:layout_marginRight="5dip"
+                android:layout_marginTop="5dip"
+                android:layout_marginBottom="5dip"
+
+      >
     <TextView
-	android:id="@+id/prompt_ns"
-	android:text="@string/ns_prompt"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:typeface="monospace"
-	android:textColor="#FFFFFF"
-	android:textStyle="bold"
-	android:layout_weight="2"
-	android:gravity="right|center_vertical"
-	/>
+        android:id="@+id/prompt_ns"
+        android:text="@string/ns_prompt"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:typeface="monospace"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_weight="2"
+        android:gravity="right|center_vertical"
+        />
     <Spinner
-	android:id="@+id/spinner_ns"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:entries="@array/ns_arrays"
-	android:typeface="monospace"
-	android:textColor="#FFFFFF"
-	android:layout_weight="1"
-	android:gravity="center"
-	/>
+        android:id="@+id/spinner_ns"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:entries="@array/ns_arrays"
+        android:typeface="monospace"
+        android:textColor="#FFFFFF"
+        android:layout_weight="1"
+        android:gravity="center"
+        />
   </LinearLayout>
 
   <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		android:id="@+id/spinner_layout3"
-		android:orientation="horizontal"
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:layout_marginLeft="5dip"
-		android:layout_marginRight="5dip"
-		android:layout_marginTop="5dip"
-		android:layout_marginBottom="5dip"
-		android:layout_below="@id/spinner_layout2"
-		>
+                android:id="@+id/spinner_layout3"
+                android:orientation="horizontal"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dip"
+                android:layout_marginRight="5dip"
+                android:layout_marginTop="5dip"
+                android:layout_marginBottom="5dip"
+
+      >
     <TextView
-	android:id="@+id/prompt_agc"
-	android:text="@string/agc_prompt"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:typeface="monospace"
-	android:textColor="#FFFFFF"
-	android:textStyle="bold"
-	android:layout_weight="2"
-	android:gravity="right|center_vertical"
-	/>
+        android:id="@+id/prompt_agc"
+        android:text="@string/agc_prompt"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:typeface="monospace"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_weight="2"
+        android:gravity="right|center_vertical"
+        />
     <Spinner
-	android:id="@+id/spinner_agc"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:entries="@array/agc_arrays"
-	android:typeface="monospace"
-	android:textColor="#FFFFFF"
-	android:layout_weight="1"
-	android:gravity="center"
-	/>
+        android:id="@+id/spinner_agc"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:entries="@array/agc_arrays"
+        android:typeface="monospace"
+        android:textColor="#FFFFFF"
+        android:layout_weight="1"
+        android:gravity="center"
+        />
   </LinearLayout>
 
   <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		android:id="@+id/button_layout"
-		android:orientation="horizontal"
-		android:layout_width="fill_parent"
-		android:layout_height="50dip"
-		android:layout_marginLeft="5dip"
-		android:layout_marginRight="5dip"
-		android:layout_marginTop="15dip"
-		android:layout_marginBottom="15dip"
-		android:layout_below="@id/spinner_layout3"
-		>
+                android:id="@+id/conn_disconn_layout"
+                android:orientation="horizontal"
+                android:layout_width="fill_parent"
+                android:layout_height="50dip"
+                android:layout_marginLeft="5dip"
+                android:layout_marginRight="5dip"
+                android:layout_marginTop="15dip"
+                android:layout_marginBottom="15dip"
+
+      >
 
     <Button
         android:id="@+id/button_connect"
-        android:text="Connect"
+        android:text="@string/connect_btn_label"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_marginLeft="10dip"
@@ -208,7 +205,7 @@
 
     <Button
         android:id="@+id/button_disconnect"
-        android:text="Disconnect"
+        android:text="@string/disconnect_btn_label"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_marginLeft="10dip"
@@ -221,6 +218,35 @@
         android:gravity="center"
         android:visibility="gone"
         android:enabled="false"
+        />
+
+
+  </LinearLayout>
+  <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:id="@+id/logs_layout"
+                android:orientation="horizontal"
+                android:layout_width="fill_parent"
+                android:layout_height="50dip"
+                android:layout_marginLeft="5dip"
+                android:layout_marginRight="5dip"
+                android:layout_marginTop="15dip"
+                android:layout_marginBottom="15dip"
+
+      >
+    <Button
+        android:id="@+id/button_logs"
+        android:text="@string/logs_btn_label"
+        android:layout_width="0dip"
+        android:layout_height="fill_parent"
+        android:layout_marginLeft="10dip"
+        android:layout_marginRight="15dip"
+        android:layout_weight="1"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/button_bg_blue"
+        android:typeface="monospace"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:enabled="true"
         />
   </LinearLayout>
 

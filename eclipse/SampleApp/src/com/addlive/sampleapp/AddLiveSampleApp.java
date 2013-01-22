@@ -529,6 +529,10 @@ public class AddLiveSampleApp extends Activity {
     @Override
     public void onItemSelected(AdapterView<?> parent, View view,
                                int position, long id) {
+    	if(ADL.getService() == null) {
+    		Log.d(LOG_TAG, "Service not initialized ");
+    		return;
+    	}
       if (position == 0) {
         ADL.getService().setProperty(new ResponderAdapter<Void>(),
             "global.dev.audio." + enablePropertyName, "0");

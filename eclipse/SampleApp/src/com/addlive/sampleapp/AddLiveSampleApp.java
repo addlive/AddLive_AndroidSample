@@ -433,7 +433,7 @@ public class AddLiveSampleApp extends Activity {
     Spinner ns = (Spinner) findViewById(R.id.spinner_ns);
     ns.setOnItemSelectedListener(
         new AdvAudioSettingsCtrl("enableNS", "modeNS"));    
-    ns.setSelection(Constants.NSModes.HIGH_SUPPRESSION);
+    ns.setSelection(Constants.NSModes.VERY_HIGH_SUPPRESSION);
 
     // initialize click on video (switches rendered video feed to next user)
     ((RelativeLayout) findViewById(R.id.video_layout)).setOnClickListener(

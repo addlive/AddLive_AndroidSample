@@ -9,41 +9,126 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.*;
-import com.addlive.platform.*;
-import com.addlive.service.*;
-import com.addlive.service.listener.*;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
+import com.addlive.Constants;
+import com.addlive.view.VideoView;
+import com.addlive.platform.*;
+import com.addlive.service.*;
+import com.addlive.service.listener.*;
+
 public class AddLiveSampleApp extends Activity {
+
+  /**
+   * ===========================================================================
+   * Constants
+   * ===========================================================================
+   */
+
   private static final long CDO_SAMPLES_APP_ID = 1;
   private static final String CDO_SAMPLES_SECRET = "CloudeoTestAccountSecret";
+  private static final int STATS_INTERVAL = 2;
+  private static final String LOG_TAG = "AddLiveDemo";
 
-  class MediaStatsView {
-    TextView text;
-    boolean up;
+  /**
+   * ===========================================================================
+   * Nested classes
+   * ===========================================================================
+   */
 
-    MediaStatsView(TextView tv, boolean u) {
-      text = tv;
-      up = u;
+  class AddLiveState {
+    long userId = 0;
+    boolean isInitialized = false;
+    boolean isConnected = false;
+    boolean isVideoPublished = false;
+    boolean isAudioPublished = false;
+    String scopeId = "";
+
+    AddLiveState() {
+      Random rand = new Random();
+      userId = (1 + rand.nextInt(9999));
+    }
+
+    AddLiveState(AddLiveState state) {
+      userId = state.userId;
+      isInitialized = state.isInitialized;
+      isConnected = state.isConnected;
+      isVideoPublished = state.isVideoPublished;
+      isAudioPublished = state.isAudioPublished;
+      scopeId = new String(state.scopeId);
+    }
+
+    void reset() {
+      isConnected = false;
+      isVideoPublished = false;
+      isAudioPublished = false;
+      scopeId = "";
     }
   }
 
-  private Map<Long, MediaStatsView> _mediaStatsMap =
-      new HashMap<Long, MediaStatsView>();
+  class MediaStatsView {    
+    TextView view = null;
+    String audio = "";
+    String video = "";
 
-  private static final String LOG_TAG = "AddLiveSampleApp";
-  private String scopeId = "";
-  private BroadcastHandler broadcastReceiver;
+    MediaStatsView(TextView view) {
+      this.view = view;
+    }
+  }
+
+  class User {
+    MediaStatsView statsView = null;
+    String videoSinkId = "";
+    boolean local = false;
+
+    User(String videoSinkId, TextView view, boolean local) {
+      this.statsView = new MediaStatsView(view);
+      this.videoSinkId = videoSinkId;
+      this.local = local;
+    }
+  };
+
+  /**
+   * ===========================================================================
+   * Properties
+   * ===========================================================================
+   */
+
+  // container to keep track of all users (includes local user as well), 
+  // key is user ID
+  private Map<Long, User> userMap = new HashMap<Long, User>();
+  
+  // BroadcastHandler to manage events (headphone and connectivity)
+  private BroadcastHandler broadcastReceiver = null;
+
+  // AddLive current connection state used for lifetime management
+  private AddLiveState currentState = new AddLiveState();
+
+  // AddLive saved connection state used for lifetime management
+  private AddLiveState savedState = null; 
+
+  // WakeLock to prevent sleep while in call
+  private WakeLock wakeLock = null; 
+
+  // keeps track if headphone is in use
+  private boolean usesHeadphone = false;
 
   /**
    * ===========================================================================
@@ -53,55 +138,136 @@ public class AddLiveSampleApp extends Activity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
-    Log.v(LOG_TAG, "Starting Cloudeo Labs ...");
+    Log.v(LOG_TAG, "onCreate");
 
     super.onCreate(savedInstanceState);
-    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
     setContentView(R.layout.main);
 
     getWindow().setSoftInputMode(
         WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+   
+    // setup wake lock to prevent app from going into sleep mode while in call
+    PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+    wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "AddLiveSampleApp");
+
+    // broadcast receiver for headset plugged and connectivity events
     broadcastReceiver = new BroadcastHandler(this);
     registerReceiver(broadcastReceiver,
-        new IntentFilter(Intent.ACTION_HEADSET_PLUG));
+		     new IntentFilter(Intent.ACTION_HEADSET_PLUG));
+    registerReceiver(broadcastReceiver,
+		     new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 
+    // local camera view: camera output is hardcoded to 640x480, size of the
+    // view is reduced
+    SurfaceView local = (SurfaceView) findViewById(R.id.local_video);
+    local.setZOrderMediaOverlay(true);
+    local.setLayoutParams(new RelativeLayout.LayoutParams(480 / 3, 640 / 3));
+
+    // url/scope to connect to
     EditText url = (EditText) findViewById(R.id.edit_url);
     url.setSelection(url.getText().length());
 
+    // local stats view
     TextView stats = (TextView) findViewById(R.id.text_stats);
-    _mediaStatsMap.put(-1L, new MediaStatsView(stats, true));
+    userMap.put(-1L, new User("", stats, true));
 
     initializeActions();
-    initializeCloudeo();
+    initializeAddLive();
   }
 
-  // ===========================================================================
+  @Override
+  public void onResume() {
+    Log.v(LOG_TAG, "onResume");
+
+    // restore saved application state
+    if (savedState != null)
+      currentState = new AddLiveState(savedState);
+    savedState = null;
+    
+    if (currentState.isInitialized) { // app was previously initialized
+      // start video preview
+      SurfaceView local = (SurfaceView) findViewById(R.id.local_video);
+
+      ADL.getService().startLocalVideo(new UIThreadResponder<String>(this) {
+	@Override
+	protected void handleResult(String videoSinkId) {
+	  setLocalVideoSink(videoSinkId);
+	}
+
+	@Override
+	protected void handleError(int errCode, String errMessage) {
+	  Log.e(LOG_TAG, "Failed to start local video.");
+	}
+      }, local);
+
+      // publish video
+      if (currentState.isConnected && currentState.isVideoPublished) {
+	onPublishVideo(true);
+      }
+    }
+
+    // resume remote video view
+    com.addlive.view.VideoView remote = 
+      (com.addlive.view.VideoView) findViewById(R.id.remote_video);
+    remote.onResume();    
+
+    // foreground lifetime begin
+    super.onResume();
+  }
+
+  @Override
+  public void onPause() {
+    Log.v(LOG_TAG, "onPause");
+
+    // store current state
+    savedState = new AddLiveState(currentState);
+
+    if (currentState.isInitialized) {
+      if (currentState.isConnected && currentState.isVideoPublished)
+	onPublishVideo(false);
+
+      ADL.getService().stopLocalVideo(new UIThreadResponder<Void>(this) {
+	  @Override 
+	  protected void handleResult(Void result) {
+	    setLocalVideoSink("");
+	  }
+
+	  @Override
+	  protected void handleError(int errCode, String errMessage) {
+	    Log.e(LOG_TAG, "Failed to stop local video");
+	  }
+      });      
+    }
+
+    // pause remote video view
+    com.addlive.view.VideoView view = 
+      (com.addlive.view.VideoView) findViewById(R.id.remote_video);
+    view.onPause();
+
+    // foreground lifetime end
+    super.onPause();
+  }
 
   @Override
   public void onDestroy() {
-    Log.v(LOG_TAG, "Destroying Cloudeo Labs ...");
+    Log.v(LOG_TAG, "onDestroy");
 
     unregisterReceiver(broadcastReceiver);
 
-    scopeId = "";
     ADL.release();
+    currentState.reset();
+
     super.onDestroy();
-  }
-
-  // ===========================================================================
-
-  @Override
-  public void onConfigurationChanged(Configuration newConfig) {
-    super.onConfigurationChanged(newConfig);
   }
 
   /**
    * ===========================================================================
-   * Cloudeo Platform initialization
+   * AddLive Platform initialization
    * ===========================================================================
    */
 
-  private void initializeCloudeo() {
+  private void initializeAddLive() {
     PlatformInitListener listener = new PlatformInitListener() {
       @Override
       public void onInitProgressChanged(InitProgressChangedEvent e) {
@@ -110,79 +276,102 @@ public class AddLiveSampleApp extends Activity {
 
       @Override
       public void onInitStateChanged(InitStateChangedEvent e) {
-        onCdoInitStateChanged(e);
+        onAdlInitStateChanged(e);
       }
     };
     PlatformInitOptions initOptions = new PlatformInitOptions();
     String storageDir =
         Environment.getExternalStorageDirectory().getAbsolutePath();
     initOptions.setStorageDir(storageDir);
-    ADL.init(listener, initOptions);
+    ADL.init(listener, initOptions, this);
   }
 
   // ===========================================================================
 
-  private void onCdoInitStateChanged(InitStateChangedEvent e) {
+  private void onAdlInitStateChanged(InitStateChangedEvent e) {
     if (e.getState() == InitState.INITIALIZED) {
-      onCdoInitialized();
+      onAdlInitialized();
     } else {
-      onCdoInitError(e);
+      onAdlInitError(e);
     }
   }
 
   // ===========================================================================
 
-  private void onCdoInitialized() {
+  private void onAdlInitialized() {
+    // set service listener, set application id and get version
+    ADL.getService().addServiceListener(new ResponderAdapter<Void>(),
+					getListener());
+
+    ADL.getService().setApplicationId(new ResponderAdapter<Void>(),
+				      CDO_SAMPLES_APP_ID);
+
     ADL.getService().getVersion(new UIThreadResponder<String>(this) {
       @Override
       protected void handleResult(String version) {
-        final TextView versionLabel =
+        TextView versionLabel =
             (TextView) findViewById(R.id.sdk_version_label);
         versionLabel.append(version);
       }
 
       @Override
       protected void handleError(int errCode, String errMessage) {
-        Log.e(LOG_TAG, "Failed to initialize platform");
+        Log.e(LOG_TAG, "Failed to get version string.");
       }
     });
 
-    ADL.getService().addServiceListener(
-        new ResponderAdapter<Void>(),
-        getListener());
+    // get all connected video capture devices
+    ADL.getService().getVideoCaptureDeviceNames(
+      new UIThreadResponder<Device[]>(this) {
+	@Override
+	protected void handleResult(Device[] devices) {
+	  onGetVideoCaptureDeviceNames(devices);
+	}
+
+	@Override
+	protected void handleError(int errCode, String errMessage) {
+	  Log.e(LOG_TAG, "Failed to get video capture devices.");
+	}
+      }
+    );
+
+    // update UI
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        final LinearLayout layout = (LinearLayout)
-            findViewById(R.id.main_layout);
-        final Button button = (Button) findViewById(R.id.button_connect);
-        final TextView status = (TextView) findViewById(R.id.text_status);
-        final TextView stats = (TextView) findViewById(R.id.text_stats);
+        Button button = (Button) findViewById(R.id.button_connect);
+        button.setEnabled(true);
+
+	((ToggleButton) findViewById(R.id.toggle_video)).setEnabled(true);
+	((ToggleButton) findViewById(R.id.toggle_audio)).setEnabled(true);
+
+        TextView status = (TextView) findViewById(R.id.text_status);
         status.setTextColor(Color.YELLOW);
         status.setText("Ready");
-        button.setEnabled(true);
+
+        TextView stats = (TextView) findViewById(R.id.text_stats);
         stats.setText("Uplink Stats");
-        for (MediaStatsView view : _mediaStatsMap.values()) {
-          if (!view.up)
-            layout.removeView(view.text);
-        }
-      }
+      }	
     });
-    ADL.getService().setApplicationId(new ResponderAdapter<Void>(),
-        CDO_SAMPLES_APP_ID);
+
+    // AddLive is initialized
+    currentState.isInitialized = true;
   }
 
   // ===========================================================================
 
-  private void onCdoInitError(InitStateChangedEvent e) {
-    final Button button = (Button) findViewById(R.id.button_connect);
-    final TextView status = (TextView) findViewById(R.id.text_status);
+  private void onAdlInitError(InitStateChangedEvent e) {
+    Button button = (Button) findViewById(R.id.button_connect);
     button.setEnabled(true);
+
+    TextView status = (TextView) findViewById(R.id.text_status);
     status.setTextColor(Color.RED);
+
     String errMessage = "ERROR: (" + e.getErrCode() + ") " +
         e.getErrMessage();
     status.setText(errMessage);
-    Log.v(LOG_TAG, errMessage);
+
+    Log.e(LOG_TAG, errMessage);
   }
 
   /**
@@ -192,12 +381,12 @@ public class AddLiveSampleApp extends Activity {
    */
 
   private void initializeActions() {
-    // 1. Initialize all the button actions
+    // initialize all button actions
     findViewById(R.id.button_connect).setOnClickListener(
         new View.OnClickListener() {
           @Override
           public void onClick(View view) {
-            onConnectClicked();
+            onConnect();
           }
         });
 
@@ -205,9 +394,27 @@ public class AddLiveSampleApp extends Activity {
         new View.OnClickListener() {
           @Override
           public void onClick(View view) {
-            onDisconnectClicked();
+            onDisconnect();
           }
         });
+
+    ((ToggleButton)findViewById(R.id.toggle_video)).setOnCheckedChangeListener(
+        new CompoundButton.OnCheckedChangeListener() {
+	  @Override
+	  public void onCheckedChanged(CompoundButton buttonView,
+				       boolean isChecked) {
+	      onPublishVideo(isChecked);
+	  }
+	});
+
+    ((ToggleButton)findViewById(R.id.toggle_audio)).setOnCheckedChangeListener(
+        new CompoundButton.OnCheckedChangeListener() {
+	  @Override
+	  public void onCheckedChanged(CompoundButton buttonView,
+				       boolean isChecked) {
+	      onPublishAudio(isChecked);
+	  }
+	});
 
     findViewById(R.id.button_logs).
         setOnClickListener(new View.OnClickListener() {
@@ -217,30 +424,36 @@ public class AddLiveSampleApp extends Activity {
       }
     });
 
-    // 2. Initialize the spinners (selects)
+    // initialize spinners (selects)
     Spinner ec = (Spinner) findViewById(R.id.spinner_ec);
-    ec.setSelection(4);
     ec.setOnItemSelectedListener(
         new AdvAudioSettingsCtrl("enableAEC", "modeAECM"));
+    updateAECConfiguration();
+
     Spinner ns = (Spinner) findViewById(R.id.spinner_ns);
-    ns.setSelection(6);
     ns.setOnItemSelectedListener(
-        new AdvAudioSettingsCtrl("enableNS", "modeNS"));
-    Spinner agc = (Spinner) findViewById(R.id.spinner_agc);
-    agc.setSelection(1);
-    agc.setOnItemSelectedListener(
-        new AdvAudioSettingsCtrl("enableAGC", "modeAGC"));
+        new AdvAudioSettingsCtrl("enableNS", "modeNS"));    
+    ns.setSelection(Constants.NSModes.HIGH_SUPPRESSION);
+
+    // initialize click on video (switches rendered video feed to next user)
+    ((RelativeLayout) findViewById(R.id.video_layout)).setOnClickListener(
+      new View.OnClickListener() {
+	@Override
+	public void onClick(View v) {
+	  renderNextUser();
+	}
+      }
+    );      
   }
 
   // ===========================================================================
 
-  private void onConnectClicked() {
-    final Button connect = (Button) findViewById(R.id.button_connect);
-    final TextView status = (TextView) findViewById(R.id.text_status);
-
+  private void onConnect() {
+    TextView status = (TextView) findViewById(R.id.text_status);
     status.setTextColor(Color.CYAN);
     status.setText("Connecting ...");
 
+    Button connect = (Button) findViewById(R.id.button_connect);
     connect.setEnabled(false);
 
     EditText edit = (EditText) findViewById(R.id.edit_url);
@@ -248,45 +461,574 @@ public class AddLiveSampleApp extends Activity {
 
     ConnectionDescriptor desc = genConnDescriptor(url);
 
-    final UIThreadResponder<MediaConnection> connectResponder =
-        new UIThreadResponder<MediaConnection>(this) {
-          @Override
-          protected void handleResult(MediaConnection result) {
-            onConnected();
-          }
+    UIThreadResponder<MediaConnection> connectResponder =
+      new UIThreadResponder<MediaConnection>(this) {
+        @Override
+	protected void handleResult(MediaConnection result) {
+	  onConnected();
+	}
 
-          @Override
-          protected void handleError(int errCode, String errMessage) {
-            onConnectError(errCode, errMessage);
-          }
-        };
+	@Override
+	protected void handleError(int errCode, String errMessage) {
+	  onConnectError(errCode, errMessage);
+	}
+      };
 
     ADL.getService().connect(connectResponder, desc);
   }
 
   // ===========================================================================
 
+  private void onDisconnect() {
+    Button disconnect = (Button) findViewById(R.id.button_disconnect);
+    disconnect.setEnabled(false);
+    
+    TextView status = (TextView) findViewById(R.id.text_status);
+    status.setTextColor(Color.CYAN);
+    status.setText("Disconnecting ...");
+
+    UIThreadResponder<Void> disconnectResponder =
+      new UIThreadResponder<Void>(this) {
+        @Override
+	protected void handleResult(Void result) {
+	  onDisconnected("Ready");
+	}
+
+	@Override
+	protected void handleError(int errCode, String errMessage) {
+	}
+    };
+
+    ADL.getService().disconnect(disconnectResponder, currentState.scopeId);
+  }
+
+  // ===========================================================================
+
+  private void onPublishVideo(final boolean publish) {
+    if (! currentState.isConnected)
+      return;
+
+    UIThreadResponder<Void> publishResponder =
+      new UIThreadResponder<Void>(this) {
+      @Override
+      protected void handleResult(Void result) {
+	onPublishedVideo(publish);
+      }
+
+      @Override
+      protected void handleError(int errCode, String errMessage) {
+	onPublishError(errCode, errMessage);
+      }
+    };
+
+    if (publish) {
+      ADL.getService().publish(publishResponder, currentState.scopeId, 
+			       MediaType.VIDEO);
+    }
+    else {
+      ADL.getService().unpublish(publishResponder, currentState.scopeId, 
+				 MediaType.VIDEO);
+    }
+  }
+
+  // ===========================================================================
+
+  private void onPublishAudio(final boolean publish) {
+    if (! currentState.isConnected)
+      return;
+
+    UIThreadResponder<Void> publishResponder =
+      new UIThreadResponder<Void>(this) {
+      @Override
+      protected void handleResult(Void result) {
+	onPublishedAudio(publish);
+      }
+
+      @Override
+      protected void handleError(int errCode, String errMessage) {
+	onPublishError(errCode, errMessage);
+      }
+    };
+
+    if (publish) {
+      ADL.getService().publish(publishResponder, currentState.scopeId, 
+			       MediaType.AUDIO);
+    }
+    else {
+      ADL.getService().unpublish(publishResponder, currentState.scopeId, 
+				 MediaType.AUDIO);
+    }      
+  }
+
+  // ===========================================================================
+
+  private void onLogsClicked() {
+    LogsPublisher publisher = new LogsPublisher();
+    List<String> filter = new LinkedList<String>();
+    filter.add("AddLive_SDK:V");
+    filter.add(LOG_TAG + ":V");
+    filter.add("*:S");
+    publisher.run(filter, this);
+  }
+
+  /**
+   * ===========================================================================
+   * AddLive responses
+   * ===========================================================================
+   */
+
+  private void onConnected() {
+    TextView status = (TextView) findViewById(R.id.text_status);
+    status.setTextColor(Color.GREEN);
+    status.setText("In Call");
+
+    Button connect = (Button) findViewById(R.id.button_connect);
+    connect.setVisibility(View.GONE);
+
+    Button disconnect = (Button) findViewById(R.id.button_disconnect);
+    disconnect.setVisibility(View.VISIBLE);
+    disconnect.setEnabled(true);
+
+    // tell SDK to measure statistics
+    ADL.getService().startMeasuringStats(new ResponderAdapter<Void>(),
+					 currentState.scopeId, STATS_INTERVAL);
+
+    currentState.isConnected = true;
+
+    currentState.isVideoPublished = 
+      ((ToggleButton) findViewById(R.id.toggle_video)).isChecked();
+    currentState.isAudioPublished =
+      ((ToggleButton) findViewById(R.id.toggle_audio)).isChecked();
+
+    wakeLock.acquire(); // prevent app from entering sleep mode
+  }
+
+  // ===========================================================================
+
+  private void onConnectError(int errCode, String errMessage) {
+    Log.e(LOG_TAG, "ERROR: (" + errCode + ") " + errMessage);
+
+    TextView status = (TextView) findViewById(R.id.text_status);
+    status.setTextColor(Color.RED);
+    status.setText("ERROR: (" + errCode + ") " + errMessage);
+
+    Button connect = (Button) findViewById(R.id.button_connect);
+    connect.setEnabled(true);
+    
+    currentState.reset();
+  }
+
+  // ===========================================================================
+
+  private void onDisconnected(String statusText) {
+    TextView status = (TextView) findViewById(R.id.text_status);
+    status.setTextColor(Color.YELLOW);
+    status.setText(statusText);
+
+    Button connect = (Button) findViewById(R.id.button_connect);
+    connect.setVisibility(View.VISIBLE);
+    connect.setEnabled(true);
+
+    Button disconnect = (Button) findViewById(R.id.button_disconnect);
+    disconnect.setVisibility(View.GONE);
+
+    clearRemoteUsers();
+
+    // clear remote video renderer
+    com.addlive.view.VideoView view = 
+      (com.addlive.view.VideoView) findViewById(R.id.remote_video);	
+    view.removeRenderer();
+
+    currentState.reset();
+
+    wakeLock.release(); // allow app to enter sleep mode
+  }
+
+  // ===========================================================================
+
+  private void onPublishError(int errCode, String errMessage) {
+    TextView status = (TextView) findViewById(R.id.text_status);
+    status.setTextColor(Color.RED);
+    status.setText("ERROR: (" + errCode + ") " + errMessage);
+
+    Log.e(LOG_TAG, "ERROR: " + errCode + " " + errMessage);
+  }
+
+  // ===========================================================================
+
+  private void onGetVideoCaptureDeviceNames(Device[] devices) {
+    int index = 0;
+
+    // set camera device names in camera selection spinner
+    String[] items = new String[devices.length];
+    for (int i=0; i<devices.length; i++) {
+      items[i] = devices[i].getLabel();
+
+      // look for front camera
+      if (items[i].toLowerCase().indexOf("front") >= 0) {
+	index = i;
+	Log.v(LOG_TAG, "found front facing camera: " + i);
+      }
+    }
+
+    SurfaceView view = (SurfaceView) findViewById(R.id.local_video);
+    ADL.getService().setVideoCaptureDevice(new ResponderAdapter<Void>(), 
+					   devices[index].getId(), view);
+
+    ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+      this, android.R.layout.simple_spinner_item, items);
+
+    Spinner spinner = (Spinner) findViewById(R.id.spinner_camera);
+    spinner.setOnItemSelectedListener(new CameraSelectionListener(devices));
+    spinner.setAdapter(adapter);
+    spinner.setSelection(index); // select front camera if available
+
+    // start video preview
+    ADL.getService().startLocalVideo(new UIThreadResponder<String>(this) {
+      @Override
+      protected void handleResult(String videoSinkId) {
+	setLocalVideoSink(videoSinkId);
+      }
+
+      @Override
+      protected void handleError(int errCode, String errMessage) {
+	Log.e(LOG_TAG, "Failed to start local video.");
+      }
+    }, view);
+  }
+
+  // ===========================================================================
+
+  private void onPublishedVideo(boolean publish) {
+    currentState.isVideoPublished = publish;
+    if (! publish) {
+      User user = userMap.get(-1L);      
+      user.statsView.video = "";
+      updateStats(user, "");
+    }
+  }
+
+  // ===========================================================================
+
+  private void onPublishedAudio(boolean publish) {
+    currentState.isAudioPublished = publish;
+    if (! publish) {
+      User user = userMap.get(-1L);      
+      user.statsView.audio = "";
+      updateStats(user, "");
+    }
+  }
+
+  /**
+   * ===========================================================================
+   * AddLive Service Events handling
+   * ===========================================================================
+   */
+
+  private AddLiveServiceListener getListener() {
+    return new AddLiveServiceListenerAdapter() {
+      @Override
+      public void onVideoFrameSizeChanged(final VideoFrameSizeChangedEvent e) {
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            onAdlVideoFrameSizeChanged(e);
+          }
+        });
+      }
+
+      @Override
+      public void onConnectionLost(final ConnectionLostEvent e) {
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            onAdlConnLost(e);
+          }
+        });
+      }
+
+      @Override
+      public void onUserEvent(final UserStateChangedEvent e) {
+	super.onUserEvent(e);
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            onAdlUserEvent(e);
+          }
+        });
+      }
+
+      @Override
+      public void onMediaStreamEvent(final UserStateChangedEvent e) {
+	super.onMediaStreamEvent(e);
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            onAdlMediaStream(e);
+          }
+        });
+      }
+
+      @Override
+      public void onMediaStats(final MediaStatsEvent e) {
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            onAdlMediaStats(e);
+          }
+        });
+      }
+
+      @Override
+      public void onMediaConnTypeChanged(final MediaConnTypeChangedEvent e) {
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            onAdlMediaConnTypeChanged(e);
+          }
+        });
+      }      
+    };
+  }
+
+  // ===========================================================================
+
+  void onAdlVideoFrameSizeChanged(VideoFrameSizeChangedEvent e) {
+    Log.v(LOG_TAG, "videoFrameSizeChanged: " + e.getSinkId() +
+	  " -> " + e.getWidth() + "x" + e.getHeight());
+
+    if (e.getSinkId().equals(userMap.get(-1L).videoSinkId)) {
+      SurfaceView view = (SurfaceView) findViewById(R.id.local_video);      
+      view.setLayoutParams(new RelativeLayout.LayoutParams(
+			     e.getWidth() / 3, e.getHeight() / 3));
+    }
+    else {
+      com.addlive.view.VideoView view = 
+	(com.addlive.view.VideoView) findViewById(R.id.remote_video);
+      if (e.getSinkId().equals(view.getSinkId()))
+	view.resolutionChanged(e.getWidth(), e.getHeight());
+    }
+  }
+
+  // ===========================================================================
+
+  private void onAdlConnLost(final ConnectionLostEvent e) {
+    Log.v(LOG_TAG, "connLost: " + e.getErrMessage());
+
+    TextView status = (TextView) findViewById(R.id.text_status);
+    status.setTextColor(Color.RED);
+    status.setText("connectionLost: (" + e.getErrCode() + ") "
+        + e.getErrMessage());
+
+    savedState = new AddLiveState(currentState);
+    onDisconnected("Reconnecting ...");
+  }
+
+  // ===========================================================================
+
+  private void onAdlMediaStats(MediaStatsEvent e) {
+    if (e.getMediaType() == MediaType.AUDIO)
+      onAudioStats(e);
+    else if (e.getMediaType() == MediaType.VIDEO)
+      onVideoStats(e);
+  }
+
+  private void onAudioStats(MediaStatsEvent e) {
+    long userId = e.getRemoteUserId();
+    User user = userMap.get(userId);
+    MediaStats stats = e.getStats();
+
+    String text = "";
+    
+    if (! user.local) {
+      text += "User " + userId + ":";
+
+      user.statsView.audio = 
+	"kbps = " + (8.0 * stats.getBitRate() / 1000.0)
+	+ " #Loss = " + stats.getTotalLoss()
+	+ " %Loss = " + stats.getLoss();
+    } else {
+      user.statsView.audio = 
+	"kbps = " + (8.0 * stats.getBitRate() / 1000.0)
+	+ " RTT = " + stats.getRtt()
+	+ " #Loss = " + stats.getTotalLoss()
+	+ " %Loss = " + stats.getLoss();
+    }
+
+    updateStats(user, text);
+  }
+
+  private void onVideoStats(MediaStatsEvent e) {
+    long userId = e.getRemoteUserId();
+    User user = userMap.get(userId);
+    MediaStats stats = e.getStats();
+
+    String text = "";
+
+    if (! user.local) {
+      text += "User " + userId + ":";
+
+      user.statsView.video =
+	"%CPU = " + stats.getTotalCpu()
+	+ " kbps = " + (8.0 * stats.getBitRate() / 1000.0)
+	+ " #Loss = " + stats.getTotalLoss()
+	+ " %Loss = " + stats.getLoss();
+    } else {
+      user.statsView.video =
+	"%CPU = " + stats.getTotalCpu()
+	+ " kbps = " + (8.0 * stats.getBitRate() / 1000.0)
+	+ " #Loss = " + stats.getTotalLoss()
+	+ " %Loss = " + stats.getLoss()
+	+ " QDL = " + stats.getQueueDelay();
+    }
+
+    updateStats(user, text);
+  }
+
+  // ===========================================================================
+
+  private void onAdlMediaConnTypeChanged(MediaConnTypeChangedEvent e) {
+    Log.v(LOG_TAG, "MediaConnTypeChanged: " + e.getScopeId() +
+	  " -> " + e.getConnectionType());
+  }
+
+  // ===========================================================================
+    
+  private void onAdlUserEvent(UserStateChangedEvent e) {
+    Log.v(LOG_TAG, "onAdlUserEvent: " + e.toString());
+
+    long userId = e.getUserId();
+    boolean isConnected = e.isConnected();
+    LinearLayout layout = (LinearLayout)
+      findViewById(R.id.main_layout);
+
+    if (isConnected) {
+      // add downlink stats entry
+      LinearLayout.LayoutParams lparams =
+	new LinearLayout.LayoutParams(
+	  LinearLayout.LayoutParams.FILL_PARENT, 
+	  LinearLayout.LayoutParams.WRAP_CONTENT);
+      lparams.setMargins(0, 5, 0, 5);
+
+      TextView tv = new TextView(this);
+      tv.setLayoutParams(lparams);
+      tv.setText("User " + userId + " Stats");
+      tv.setGravity(Gravity.CENTER);
+      tv.setTextSize(1, 13.0f);
+      tv.setTypeface(Typeface.MONOSPACE);
+
+      layout.addView(tv);
+
+      // add new user
+      userMap.put(userId, new User(e.getVideoSinkId(), tv, false));
+
+      if (e.isVideoPublished()) {
+	// render video from this user if another user is currently not rendered
+	renderUserIfNotBusy(userId, e.getVideoSinkId());
+      }
+    } else {
+      // remove downlink stats entry
+      MediaStatsView statsView = userMap.get(userId).statsView;
+      layout.removeView(statsView.view);
+
+      // remove user
+      userMap.remove(userId);
+
+      // switch video to another user if available
+      renderNextUserOrRemove();
+    }
+  }
+
+  // ===========================================================================
+
+  private void onAdlMediaStream(UserStateChangedEvent e) {
+    Log.v(LOG_TAG, "onAdlMediaStream" + e.toString());
+
+    if (e.getMediaType() == MediaType.AUDIO)
+      onAudioStream(e);
+    else if (e.getMediaType() == MediaType.VIDEO)
+      onVideoStream(e);
+  }
+
+  private void onAudioStream(UserStateChangedEvent e) {
+    if (! e.isAudioPublished()) { // audio has been unpublished
+      long userId = e.getUserId();
+      User user = userMap.get(userId);
+
+      // clear audio stats
+      user.statsView.audio = "";
+      updateStats(user, "User " + userId + ":");
+    }
+  }
+
+  private void onVideoStream(UserStateChangedEvent e) {
+    long userId = e.getUserId();
+
+    if (e.isVideoPublished()) { // video has been published
+      // update video sink id for this user
+      userMap.get(userId).videoSinkId = e.getVideoSinkId();
+      
+      // render video from this user if another user is currently not rendered
+      renderUserIfNotBusy(userId, e.getVideoSinkId());
+    }
+    else {
+      // video has been unpublished so we don't have a sink anymore
+      userMap.get(userId).videoSinkId = "";
+
+      // clear video stats
+      User user = userMap.get(userId);
+      user.statsView.video = "";
+      updateStats(user, "User " + userId + ":");
+
+      // switch video to another user if available
+      renderNextUserOrRemove();
+    }
+  }
+
+  /**
+   * ===========================================================================
+   * Private helpers
+   * ===========================================================================
+   */
+  
+  // generates the ConnectionDescriptor (authentication + video description)
   private ConnectionDescriptor genConnDescriptor(String url) {
+    String[] urlSplit = url.split("/");    
+    if (urlSplit.length == 1)
+      currentState.scopeId = urlSplit[0];
+    else
+      currentState.scopeId = urlSplit[1];
+
     ConnectionDescriptor desc = new ConnectionDescriptor();
-    desc.setAutopublishAudio(true);
-    desc.setUrl(url);
-    scopeId = desc.getUrl().split("/")[1];
-    Random rand = new Random();
-    long userId = (1 + rand.nextInt(9999));
+    desc.setAutopublishAudio(
+      ((ToggleButton) findViewById(R.id.toggle_audio)).isChecked());
+    desc.setAutopublishVideo(
+      ((ToggleButton) findViewById(R.id.toggle_video)).isChecked());
+    desc.setScopeId(currentState.scopeId);
+    desc.setUrl((urlSplit.length == 1) ? "" : url);
+    
+    // video stream description
+    VideoStreamDescriptor videoStream = new VideoStreamDescriptor();
+    videoStream.setMaxWidth(480);
+    videoStream.setMaxHeight(640);
+    videoStream.setMaxBitRate(1024);
+    videoStream.setMaxFps(15);
+    desc.setVideoStream(videoStream);
+
+    // authentication
     String salt = "Some random string salt";
     long timeNow = System.currentTimeMillis() / 1000;
     long expires = timeNow + (5 * 60);
 
-    //desc.setToken("" + userId);
     AuthDetails authDetails = new AuthDetails();
-    authDetails.setUserId(userId);
+    authDetails.setUserId(currentState.userId);
     authDetails.setSalt(salt);
     authDetails.setExpires(expires);
     StringBuilder signatureBodyBuilder = new StringBuilder();
     signatureBodyBuilder.
         append(CDO_SAMPLES_APP_ID).
-        append(scopeId).
-        append(userId).
+        append(currentState.scopeId).
+        append(currentState.userId).
         append(salt).
         append(expires).
         append(CDO_SAMPLES_SECRET);
@@ -299,10 +1041,11 @@ public class AddLiveSampleApp extends Activity {
       signature = bytesToHexString(digest.digest());
     } catch (NoSuchAlgorithmException e1) {
       Log.e(LOG_TAG, "Failed to calculate authentication signature due to " +
-          "missing SHA-256 algorithm");
+          "missing SHA-256 algorithm.");
     }
     authDetails.setSignature(signature);
     desc.setAuthDetails(authDetails);
+
     return desc;
   }
 
@@ -318,196 +1061,139 @@ public class AddLiveSampleApp extends Activity {
     }
     return sb.toString();
   }
-  // ===========================================================================
 
-  private void onDisconnectClicked() {
-    final Button disconnect = (Button) findViewById(R.id.button_disconnect);
-    final TextView status = (TextView) findViewById(R.id.text_status);
+  private void clearRemoteUsers() {
+    // remove stats entries from layout
+    LinearLayout layout = (LinearLayout) findViewById(R.id.main_layout);
 
-    status.setTextColor(Color.CYAN);
-    status.setText("Disconnecting ...");
+    for (User user : userMap.values()) {
+      if (! user.local)
+	layout.removeView(user.statsView.view);
+    }
 
-    disconnect.setEnabled(false);
+    // remove all remote users
+    Iterator<Map.Entry<Long,User>> it = userMap.entrySet().iterator();
+    
+    while (it.hasNext()) {
+      Map.Entry<Long,User> e = it.next();
 
-    final UIThreadResponder<Void> disconnectResponder =
-        new UIThreadResponder<Void>(this) {
-          @Override
-          protected void handleResult(Void result) {
-            onDisconnected();
-          }
-
-          @Override
-          protected void handleError(int errCode, String errMessage) {
-          }
-        };
-
-    ADL.getService().disconnect(disconnectResponder, scopeId);
+      if (! e.getValue().local)
+	it.remove();
+    }
+  }
+ 
+  private void setLocalVideoSink(String videoSinkId) {
+    userMap.get(-1L).videoSinkId = videoSinkId;
   }
 
-  // ===========================================================================
+  // switch video feed to the next user available
+  private boolean renderNextUser() {
+    com.addlive.view.VideoView view = 
+      (com.addlive.view.VideoView) findViewById(R.id.remote_video);	
 
-  private void onConnected() {
-    final Button connect = (Button) findViewById(R.id.button_connect);
-    final Button disconnect = (Button) findViewById(R.id.button_disconnect);
-    final TextView status = (TextView) findViewById(R.id.text_status);
+    Iterator<Map.Entry<Long,User>> it = userMap.entrySet().iterator();
 
-    status.setTextColor(Color.GREEN);
-    status.setText("In Call");
+    while (it.hasNext()) {
+      Map.Entry<Long,User> e = it.next();      
+      if (e.getValue().local)
+	continue;
 
-    connect.setVisibility(View.GONE);
+      if (e.getValue().videoSinkId.equals(view.getSinkId()))
+	break;
+    }
 
-    disconnect.setVisibility(View.VISIBLE);
-    disconnect.setEnabled(true);
-  }
+    while (it.hasNext()) {
+      Map.Entry<Long,User> e = it.next();
+      if (e.getValue().local)
+	continue;
 
-  // ===========================================================================
-
-  private void onConnectError(int errCode, String errMessage) {
-    final Button connect = (Button) findViewById(R.id.button_connect);
-    final TextView status = (TextView) findViewById(R.id.text_status);
-
-    status.setTextColor(Color.RED);
-    status.setText("ERROR: (" + errCode + ") " + errMessage);
-
-    connect.setEnabled(true);
-
-    Log.v(LOG_TAG, "ERROR: " + errCode + " " + errMessage);
-  }
-
-  // ===========================================================================
-
-  private void onDisconnected() {
-    final Button connect = (Button) findViewById(R.id.button_connect);
-    final Button disconnect = (Button) findViewById(R.id.button_disconnect);
-    final TextView status = (TextView) findViewById(R.id.text_status);
-
-    status.setTextColor(Color.YELLOW);
-    status.setText("Ready");
-
-    connect.setVisibility(View.VISIBLE);
-    connect.setEnabled(true);
-
-    disconnect.setVisibility(View.GONE);
-  }
-
-  private void onLogsClicked() {
-    Log.d(LOG_TAG, "Gathering logs");
-    LogsPublisher publisher = new LogsPublisher();
-    List<String> filter = new LinkedList<String>();
-    filter.add(LOG_TAG + ":V");
-    filter.add("*:S");
-    publisher.run(filter, this);
-  }
-
-
-  /**
-   * ===========================================================================
-   * Cloudeo Service Events handling
-   * ===========================================================================
-   */
-
-  private AddLiveServiceListener getListener() {
-    return new AddLiveServiceListenerAdapter() {
-      @Override
-      public void onConnectionLost(final ConnectionLostEvent e) {
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            onCdoConnLost(e);
-          }
-        });
+      if (e.getValue().videoSinkId.length() > 0) {
+	renderUser(e.getKey(), e.getValue().videoSinkId);
+	return true;
       }
+    }
 
-      @Override
-      public void onUserEvent(final UserStateChangedEvent e) {
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            onCdoUserEvent(e);
-          }
-        });
+    it = userMap.entrySet().iterator();
 
-      }
+    while (it.hasNext()) {
+      Map.Entry<Long,User> e = it.next();
+      if (e.getValue().local)
+	continue;
 
-      @Override
-      public void onMediaStats(final MediaStatsEvent e) {
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            onCdoMediaStats(e);
-          }
-        });
+      if (e.getValue().videoSinkId.equals(view.getSinkId()))
+	break;
 
-      }
-    };
+      if (e.getValue().videoSinkId.length() > 0) {
+	renderUser(e.getKey(), e.getValue().videoSinkId);
+	return true;
+      }      
+    }
+
+    return false;
   }
 
-  // ===========================================================================
+  // switch video feed to next avail. user or stop remote rendering completely
+  private void renderNextUserOrRemove() {
+    com.addlive.view.VideoView view = 
+      (com.addlive.view.VideoView) findViewById(R.id.remote_video);	
 
-  private void onCdoConnLost(final ConnectionLostEvent e) {
-    final TextView status = (TextView) findViewById(R.id.text_status);
-    status.setTextColor(Color.RED);
-    status.setText("Connection Lost: (" + e.getErrCode() + ") "
-        + e.getErrMessage());
-  }
+    for (User user : userMap.values()) {
+      if (user.videoSinkId.equals(view.getSinkId()))
+	return;
+    }
 
-  // ===========================================================================
-
-  private void onCdoMediaStats(MediaStatsEvent e) {
-    if (e.getMediaType() != MediaType.AUDIO) {
+    if (renderNextUser())
       return;
-    }
-    final long userId = e.getRemoteUserId();
-    final MediaStatsView statsView = _mediaStatsMap.get(userId);
-    final MediaStats stats = e.getStats();
-    if (!statsView.up) {
-      statsView.text.setText(
-          "User " + userId
-              + ": kbps = " + (8.0 * stats.getBitRate() / 1000.0)
-              + " #Loss = " + stats.getTotalLoss()
-              + " %Loss = " + stats.getLoss());
-    } else {
-      statsView.text.setText(
-          "kbps = " + (8.0 * stats.getBitRate() / 1000.0)
-              + " RTT = " + stats.getRtt()
-              + " #Loss = " + stats.getTotalLoss()
-              + " %Loss = " + stats.getLoss());
-    }
+
+    view.removeRenderer();
   }
 
-  // ===========================================================================
+  // render given video feed of user if no other is currently beeing renderer
+  private void renderUserIfNotBusy(long userId, String videoSinkId) {
+    com.addlive.view.VideoView view = 
+      (com.addlive.view.VideoView) findViewById(R.id.remote_video);
 
-  private void onCdoUserEvent(UserStateChangedEvent e) {
-    final long userId = e.getUserId();
-    final boolean isConnected = e.isConnected();
-    final AddLiveSampleApp tmp = this;
-    final LinearLayout layout = (LinearLayout)
-        findViewById(R.id.main_layout);
+    if (view.getSinkId().length() > 0)
+      return;
 
-    if (isConnected) {
-      LinearLayout.LayoutParams lparams =
-          new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, 30);
+    renderUser(userId, videoSinkId);
+  }
 
-      TextView tv = new TextView(tmp);
-      tv.setLayoutParams(lparams);
+  // select rendered user in stats list (on bottom of application),
+  // connect view to given sink (this will start the rendering) and 
+  // tell streamer only to forward given user to us
+  private void renderUser(long userId, String videoSinkId) {
+    com.addlive.view.VideoView view = 
+      (com.addlive.view.VideoView) findViewById(R.id.remote_video);    
 
-      tv.setText("User " + userId + " Stats");
-      tv.setGravity(Gravity.CENTER);
-      tv.setTextSize(1, 13.0f);
-      tv.setTypeface(Typeface.MONOSPACE);
-      tv.setSingleLine();
-
-      layout.addView(tv);
-
-      _mediaStatsMap.put(userId,
-          new MediaStatsView(tv, false));
-    } else {
-      final MediaStatsView statsView =
-          _mediaStatsMap.get(userId);
-      layout.removeView(statsView.text);
-
-      _mediaStatsMap.remove(userId);
+    for (User user : userMap.values()) {
+      if (user.videoSinkId.equals(view.getSinkId())) {
+	user.statsView.view.setBackgroundResource(R.color.black);
+      }
+      if (user.videoSinkId.equals(videoSinkId)) {
+	user.statsView.view.setBackgroundResource(R.color.lightblue);
+      }
     }
+
+    view.addRenderer(videoSinkId);
+    
+    long[] users = {userId};
+    ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(),
+				       currentState.scopeId, users);    
+  }
+
+  // combine given text with audio and video stats strings
+  private void updateStats(User user, String text) {
+    if (user.statsView.audio.length() > 0)
+      text += " [A] " + user.statsView.audio;
+    else
+      text += " [no audio]";
+    if (user.statsView.video.length() > 0)
+      text += " [V] " + user.statsView.video;    
+    else
+      text += " [no video]";
+    
+    user.statsView.view.setText(text);
   }
 
   /**
@@ -529,19 +1215,23 @@ public class AddLiveSampleApp extends Activity {
     @Override
     public void onItemSelected(AdapterView<?> parent, View view,
                                int position, long id) {
-    	if(ADL.getService() == null) {
-    		Log.d(LOG_TAG, "Service not initialized ");
-    		return;
-    	}
-      if (position == 0) {
-        ADL.getService().setProperty(new ResponderAdapter<Void>(),
-            "global.dev.audio." + enablePropertyName, "0");
-      } else {
-        ADL.getService().setProperty(new ResponderAdapter<Void>(),
-            "global.dev.audio." + enablePropertyName, "1");
+      if(ADL.getService() == null) {
+	Log.d(LOG_TAG, "Service not initialized ");
+	return;
+      }
 
-        ADL.getService().setProperty(new ResponderAdapter<Void>(),
-            "global.dev.audio." + modePropertyName, "" + (position - 1));
+      if (position == 0) {
+        ADL.getService().setProperty(
+	  new ResponderAdapter<Void>(),
+	  "global.dev.audio." + enablePropertyName, "0");
+      } else {
+        ADL.getService().setProperty(
+	  new ResponderAdapter<Void>(),
+	  "global.dev.audio." + enablePropertyName, "1");
+
+        ADL.getService().setProperty(
+	  new ResponderAdapter<Void>(),
+	  "global.dev.audio." + modePropertyName, "" + (position - 1));
       }
     }
 
@@ -551,26 +1241,110 @@ public class AddLiveSampleApp extends Activity {
     }
   }
 
-  private void onHeadphonePlugged(boolean plugged) {
+  private void updateAECConfiguration() {
     Spinner ec = (Spinner) findViewById(R.id.spinner_ec);
-    if (plugged)
-      ec.setSelection(0); // disable echo cancellation
-    else
-      ec.setSelection(4);
+    ec.setSelection(
+      usesHeadphone ? Constants.AECModes.DISABLED 
+                    : Constants.AECModes.SPEAKERPHONE);
+  }
+
+  /**
+   * ===========================================================================
+   * BroadcastReceiver for system events
+   * ===========================================================================
+   */
+
+  private void onHeadphonePlugged(boolean plugged) {
+    usesHeadphone = plugged;
+    updateAECConfiguration();
+  }
+
+  private void onNetworkChanged(NetworkInfo info) {
+    Log.v(LOG_TAG, info.toString());
+
+    if (info.getState() == NetworkInfo.State.CONNECTED) {
+      if (savedState != null) {
+	currentState = new AddLiveState(savedState);
+	if (currentState.isConnected)
+	  onConnect();
+	savedState = null;
+      }
+    }
   }
 
   private class BroadcastHandler extends BroadcastReceiver {
-    private AddLiveSampleApp _parent;
+    private AddLiveSampleApp parent;
 
     public BroadcastHandler(AddLiveSampleApp parent) {
-      _parent = parent;
+      this.parent = parent;
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
-      int state = intent.getIntExtra("state", -1);
-      _parent.onHeadphonePlugged(state == 1);
+      if (intent.getAction().equals(Intent.ACTION_HEADSET_PLUG)) {
+	int state = intent.getIntExtra("state", -1);
+	this.parent.onHeadphonePlugged(state == 1);
+	return;
+      }
+
+      if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+	NetworkInfo info = intent.getParcelableExtra(
+	  ConnectivityManager.EXTRA_NETWORK_INFO);
+	this.parent.onNetworkChanged(info);
+	return;
+      }
     }
   }
 
+  /**
+   * ===========================================================================
+   * Camera selection
+   * ===========================================================================
+   */
+
+  class CameraSelectionListener implements AdapterView.OnItemSelectedListener {
+    private Device[] devices;
+
+    CameraSelectionListener(Device[] devices) {
+      this.devices = devices;
+    }
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view,
+                               int position, long id) {
+      if(ADL.getService() == null) {
+	Log.d(LOG_TAG, "Service not initialized ");
+	return;
+      }
+
+      String idx = this.devices[position].getId();
+      Log.v(LOG_TAG, "Camera selection: " + position + " (" + idx +")");
+
+      SurfaceView surfaceView = (SurfaceView) findViewById(R.id.local_video);
+      ADL.getService().setVideoCaptureDevice(new ResponderAdapter<Void>(), 
+					     idx, surfaceView);
+    }
+
+    @Override    
+    public void onNothingSelected(AdapterView<?> adapterView) {
+      ;
+    }
+  }
+
+  /**
+   * ===========================================================================
+   * Intercept key presses
+   * ===========================================================================
+   */
+
+  @Override
+  public boolean onKeyDown(int keyCode, KeyEvent event) {
+/*
+    if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+      
+      return true;
+    }
+*/
+    return super.onKeyDown(keyCode, event);
+  }
 }

@@ -16,6 +16,7 @@ import java.util.zip.GZIPOutputStream;
 /**
  * Simple utility class for publishing log files
  */
+
 public class LogsPublisher {
   public void run(List<String> filter, Activity activity) {
     final ByteArrayOutputStream log_gz = collectLogs(filter);
@@ -25,8 +26,8 @@ public class LogsPublisher {
 
     Uri uri = null;
     try {
-      File file = File.createTempFile(prefix, ".txt",
-          activity.getExternalCacheDir());
+      File file = File.createTempFile(prefix, ".txt.gz",
+				      activity.getExternalCacheDir());
 
       FileOutputStream stream = new FileOutputStream(file);
       stream.write(log_gz.toByteArray());
@@ -53,7 +54,7 @@ public class LogsPublisher {
     commandLine.add("logcat");
     commandLine.add("-d");
     commandLine.add("-v");
-    commandLine.add("long");
+    commandLine.add("threadtime");
     commandLine.addAll(filter);
 
     String[] cl = new String[commandLine.size()];
@@ -63,24 +64,17 @@ public class LogsPublisher {
       Process process = Runtime.getRuntime().exec(cl);
 
       BufferedReader reader = new BufferedReader(
-          new InputStreamReader(process.getInputStream()));
+	new InputStreamReader(process.getInputStream()));
 
       String line;
       while ((line = reader.readLine()) != null) {
-        if(line.length() == 0) {
-          continue;
-        }
         log.append(line);
-
-        if(line.matches("\\[.*\\]")) {
-          log.append(' ');
-        } else {
-          log.append(' ');
-        }
+	log.append('\n');
       }
 
-      out.write(log.toString().getBytes());
-      out.close();
+      GZIPOutputStream gzip = new GZIPOutputStream(out);
+      gzip.write(log.toString().getBytes());
+      gzip.close();
     } catch (IOException e) {
       Log.v(TAG, "Error while executing logcat process");
     }
@@ -88,7 +82,7 @@ public class LogsPublisher {
     return out;
   }
 
-  private static final String TAG = "CollectAndSendLogs";
+  private static final String TAG = "LogsPublisher";
 }
 
 

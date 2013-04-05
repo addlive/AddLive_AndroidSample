@@ -621,9 +621,11 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   private void onDisconnected(String statusText) {
-    TextView status = (TextView) findViewById(R.id.text_status);
-    status.setTextColor(Color.YELLOW);
-    status.setText(statusText);
+    if (statusText.length() > 0) {
+      TextView status = (TextView) findViewById(R.id.text_status);
+      status.setTextColor(Color.YELLOW);
+      status.setText(statusText);
+    }
 
     Button connect = (Button) findViewById(R.id.button_connect);
     connect.setVisibility(View.VISIBLE);
@@ -821,7 +823,7 @@ public class AddLiveSampleApp extends Activity {
         + e.getErrMessage());
 
     savedState = new AddLiveState(currentState);
-    onDisconnected("Reconnecting ...");
+    onDisconnected("");
   }
 
   // ===========================================================================

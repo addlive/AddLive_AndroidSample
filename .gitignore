@@ -6,3 +6,4 @@ gen
 .class
 bin
 eclipse/SampleApp/libs/*
+.DS_Store

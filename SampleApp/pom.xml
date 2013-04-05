@@ -11,7 +11,8 @@
 
 
   <properties>
-    <nativeSdk.version>1.19.0.10</nativeSdk.version>
+    <addlive.version>2.0.0.12</addlive.version>
+    <api.level>16</api.level>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -52,7 +53,7 @@
         <version>3.4.0</version>
         <configuration>
           <sdk>
-            <platform>10</platform>
+            <platform>${api.level}</platform>
           </sdk>
           <undeployBeforeDeploy>true</undeployBeforeDeploy>
         </configuration>
@@ -81,7 +82,7 @@
 <dependency>
   <groupId>com.addlive</groupId>
   <artifactId>android-sdk</artifactId>
-  <version>${nativeSdk.version}</version>
+  <version>${addlive.version}</version>
 </dependency>
 
 
@@ -89,7 +90,7 @@
 <dependency>
   <groupId>com.addlive</groupId>
   <artifactId>libAddLive</artifactId>
-  <version>${nativeSdk.version}</version>
+  <version>${addlive.version}</version>
   <scope>runtime</scope>
   <type>so</type>
 </dependency>
@@ -97,7 +98,7 @@
 <dependency>
   <groupId>com.addlive</groupId>
   <artifactId>libwebrtc_voice</artifactId>
-  <version>${nativeSdk.version}</version>
+  <version>${addlive.version}</version>
   <scope>runtime</scope>
   <type>so</type>
 </dependency>
@@ -105,7 +106,7 @@
 <dependency>
   <groupId>com.addlive</groupId>
   <artifactId>libgnustl_shared</artifactId>
-  <version>${nativeSdk.version}</version>
+  <version>${addlive.version}</version>
   <scope>runtime</scope>
   <type>so</type>
 </dependency>
@@ -116,7 +117,7 @@
 <repository>
   <id>addlive-maven-repo</id>
   <name>Stable Repository</name>
-  <url>http://api.addlive.com/stable/maven</url>
+  <url>http://api.addlive.com/maven</url>
   <releases>
     <enabled>true</enabled>
   </releases>

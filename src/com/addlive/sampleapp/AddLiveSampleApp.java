@@ -5,8 +5,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
@@ -16,21 +14,16 @@ import android.os.Environment;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.KeyEvent;
-import android.view.SurfaceView;
-import android.view.View;
-import android.view.WindowManager;
+import android.view.*;
 import android.widget.*;
-
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.*;
-
 import com.addlive.Constants;
 import com.addlive.platform.*;
 import com.addlive.service.*;
 import com.addlive.service.listener.*;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 public class AddLiveSampleApp extends Activity {
 
@@ -70,7 +63,7 @@ public class AddLiveSampleApp extends Activity {
       isConnected = state.isConnected;
       isVideoPublished = state.isVideoPublished;
       isAudioPublished = state.isAudioPublished;
-      scopeId = new String(state.scopeId);
+      scopeId = state.scopeId;
     }
 
     void reset() {
@@ -102,8 +95,6 @@ public class AddLiveSampleApp extends Activity {
       this.local = local;
     }
   }
-
-  ;
 
   /**
    * ===========================================================================
@@ -342,8 +333,8 @@ public class AddLiveSampleApp extends Activity {
         Button button = (Button) findViewById(R.id.button_connect);
         button.setEnabled(true);
 
-        ((ToggleButton) findViewById(R.id.toggle_video)).setEnabled(true);
-        ((ToggleButton) findViewById(R.id.toggle_audio)).setEnabled(true);
+        findViewById(R.id.toggle_video).setEnabled(true);
+        findViewById(R.id.toggle_audio).setEnabled(true);
 
         TextView status = (TextView) findViewById(R.id.text_status);
         status.setTextColor(Color.YELLOW);
@@ -436,7 +427,7 @@ public class AddLiveSampleApp extends Activity {
     ns.setSelection(Constants.NSModes.VERY_HIGH_SUPPRESSION);
 
     // initialize click on video (switches rendered video feed to next user)
-    ((RelativeLayout) findViewById(R.id.video_layout)).setOnClickListener(
+    findViewById(R.id.video_layout).setOnClickListener(
         new View.OnClickListener() {
           @Override
           public void onClick(View v) {
@@ -665,7 +656,7 @@ public class AddLiveSampleApp extends Activity {
       items[i] = devices[i].getLabel();
 
       // look for front camera
-      if (items[i].toLowerCase().indexOf("front") >= 0) {
+      if (items[i].toLowerCase().contains("front")) {
         index = i;
         Log.v(LOG_TAG, "found front facing camera: " + i);
       }
@@ -1031,7 +1022,7 @@ public class AddLiveSampleApp extends Activity {
         append(expires).
         append(CDO_SAMPLES_SECRET);
     String signatureBody = signatureBodyBuilder.toString();
-    MessageDigest digest = null;
+    MessageDigest digest;
     String signature = "";
     try {
       digest = MessageDigest.getInstance("SHA-256");
@@ -1289,7 +1280,6 @@ public class AddLiveSampleApp extends Activity {
         NetworkInfo info = intent.getParcelableExtra(
             ConnectivityManager.EXTRA_NETWORK_INFO);
         this.parent.onNetworkChanged(info);
-        return;
       }
     }
   }
@@ -1325,7 +1315,7 @@ public class AddLiveSampleApp extends Activity {
 
     @Override
     public void onNothingSelected(AdapterView<?> adapterView) {
-      ;
+
     }
   }
 

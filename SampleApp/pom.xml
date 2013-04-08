@@ -11,7 +11,7 @@
 
 
   <properties>
-    <addlive.version>2.0.0.13</addlive.version>
+    <addlive.version>2.0.0.15</addlive.version>
     <api.level>16</api.level>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>

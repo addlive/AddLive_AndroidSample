@@ -3,6 +3,13 @@
 target
 gen
 
+
+# Eclipse:
+
+.classpath
+.project
+.settings
+
 .class
 bin
 libs/*

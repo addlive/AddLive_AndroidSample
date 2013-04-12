@@ -998,9 +998,9 @@ public class AddLiveSampleApp extends Activity {
 
     // video stream description
     VideoStreamDescriptor videoStream = new VideoStreamDescriptor();
-    videoStream.setMaxWidth(480);
-    videoStream.setMaxHeight(640);
-    videoStream.setMaxBitRate(1024);
+    videoStream.setMaxWidth(240);
+    videoStream.setMaxHeight(320);
+    videoStream.setMaxBitRate(512);
     videoStream.setMaxFps(15);
     desc.setVideoStream(videoStream);
 

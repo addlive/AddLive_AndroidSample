@@ -439,6 +439,54 @@ public class AddLiveSampleApp extends Activity {
 
   // ===========================================================================
 
+  private void onNetworkTest() {
+    String salt = "Some random string salt";
+    long timeNow = System.currentTimeMillis() / 1000;
+    long expires = timeNow + (5 * 60);
+
+    StringBuilder signatureBodyBuilder = new StringBuilder();
+    signatureBodyBuilder.
+        append(CDO_SAMPLES_APP_ID).
+        append("").
+        append(currentState.userId).
+        append(salt).
+        append(expires).
+        append(CDO_SAMPLES_SECRET);
+    String signatureBody = signatureBodyBuilder.toString();
+    MessageDigest digest;
+    String signature = "";
+    try {
+      digest = MessageDigest.getInstance("SHA-256");
+      digest.update(signatureBody.getBytes());
+      signature = bytesToHexString(digest.digest());
+    } catch (NoSuchAlgorithmException e1) {
+      Log.e(LOG_TAG, "Failed to calculate authentication signature due to " +
+          "missing SHA-256 algorithm.");
+    }
+
+    AuthDetails authDetails = new AuthDetails();
+    authDetails.setUserId(currentState.userId);
+    authDetails.setExpires(expires);
+    authDetails.setSalt(salt);
+    authDetails.setSignature(signature);
+
+    ADL.getService().networkTest(
+      new UIThreadResponder<Integer>(this) {
+	@Override
+	protected void handleResult(Integer quality) {
+	  Log.v(LOG_TAG, "Network test result: " + quality);
+	}
+
+	@Override
+	protected void handleError(int errCode, String errMessage) {
+	  Log.e(LOG_TAG, "Failed to run network test.");
+	}
+      }, 1024, authDetails
+    );
+  }
+
+  // ===========================================================================
+
   private void onConnect() {
     TextView status = (TextView) findViewById(R.id.text_status);
     status.setTextColor(Color.CYAN);

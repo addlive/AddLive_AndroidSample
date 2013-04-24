@@ -779,6 +779,17 @@ public class AddLiveSampleApp extends Activity {
           }
         });
       }
+
+      @Override
+      public void onMediaConnHealthChanged(
+	final MediaConnHealthChangedEvent e) {
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            onAdlMediaConnHealthChanged(e);
+          }
+        });
+      }
     };
   }
 
@@ -880,6 +891,13 @@ public class AddLiveSampleApp extends Activity {
   private void onAdlMediaConnTypeChanged(MediaConnTypeChangedEvent e) {
     Log.v(LOG_TAG, "MediaConnTypeChanged: " + e.getScopeId() +
         " -> " + e.getConnectionType());
+  }
+
+  // ===========================================================================
+
+  private void onAdlMediaConnHealthChanged(MediaConnHealthChangedEvent e) {
+    Log.v(LOG_TAG, "MediaConnHealthChanged: " + e.getScopeId() +
+        " -> " + e.getHealthStatus());
   }
 
   // ===========================================================================

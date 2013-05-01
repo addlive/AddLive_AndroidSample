@@ -2,15 +2,14 @@
 *.iml
 target
 gen
-
-
-# Eclipse:
-
 .classpath
 .project
 .settings
-
 .class
 bin
-libs/*
+libs
+build.xml
+local.properties
+proguard-project.txt
 .DS_Store
+*.sh

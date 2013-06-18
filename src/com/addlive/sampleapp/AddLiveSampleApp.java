@@ -819,6 +819,16 @@ public class AddLiveSampleApp extends Activity {
       }
 
       @Override
+      public void onMessage(final MessageEvent e) {
+	runOnUiThread(new Runnable() {
+	  @Override
+	  public void run() {
+	    onAdlMessage(e);
+          }
+	});
+      }
+
+      @Override
       public void onMediaConnTypeChanged(final MediaConnTypeChangedEvent e) {
         runOnUiThread(new Runnable() {
           @Override
@@ -932,6 +942,14 @@ public class AddLiveSampleApp extends Activity {
     }
 
     updateStats(user, text);
+  }
+
+  // ===========================================================================
+
+  private void onAdlMessage(MessageEvent e) {
+    Log.v(LOG_TAG, "Message: " + e.toString());
+    Toast.makeText(this, "Got a message from user " + e.getSrcUserId(), 
+		   Toast.LENGTH_SHORT).show();
   }
 
   // ===========================================================================

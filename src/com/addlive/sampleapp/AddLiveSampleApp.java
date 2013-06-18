@@ -899,6 +899,7 @@ public class AddLiveSampleApp extends Activity {
         findViewById(R.id.main_layout);
 
     if (isConnected) {
+      Log.i(LOG_TAG, "Got new user connected: " + e.getUserId());
       // add downlink stats entry
       LinearLayout.LayoutParams lparams =
           new LinearLayout.LayoutParams(
@@ -1173,6 +1174,7 @@ public class AddLiveSampleApp extends Activity {
     view.addRenderer(videoSinkId);
 
     long[] users = {userId};
+    Log.d(LOG_TAG, "Calling set allowed senders with remote user id: " + userId);
     ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(),
         currentState.scopeId, users);
   }

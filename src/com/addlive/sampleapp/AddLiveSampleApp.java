@@ -33,8 +33,10 @@ public class AddLiveSampleApp extends Activity {
    * ===========================================================================
    */
 
-  private static final long ADL_APP_ID = 1;
-  private static final String ADL_API_KEY = "CloudeoTestAccountSecret";
+  private static final long ADL_APP_ID = -1; // TODO set your app ID here.
+  private static final String ADL_API_KEY = ""; // TODO set you API key here.
+
+
   private static final int STATS_INTERVAL = 2;
   private static final String LOG_TAG = "AddLiveDemo";
 

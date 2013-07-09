@@ -3,7 +3,7 @@
 <resources>
   <string name="app_name">AddLiveDemo</string>
 
-  <string name="default_room">Android</string>
+  <string name="default_room">ADL_Android</string>
 
   <string name="ec_prompt">AEC:</string>
 

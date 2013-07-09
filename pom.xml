@@ -11,7 +11,7 @@
 
 
   <properties>
-    <addlive.version>2.0.0.15</addlive.version>
+    <addlive.version>2.0.1.51</addlive.version>
     <api.level>16</api.level>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -19,9 +19,7 @@
   <version>0.0.0.0</version>
 
   <description>Showcase application for the AddLive Android SDK</description>
-  <dependencyManagement>
-
-  </dependencyManagement>
+  <dependencyManagement></dependencyManagement>
 
   <build>
     <finalName>addlive-sample</finalName>
@@ -79,51 +77,50 @@
       <scope>provided</scope>
     </dependency>
 
-<dependency>
-  <groupId>com.addlive</groupId>
-  <artifactId>android-sdk</artifactId>
-  <version>${addlive.version}</version>
-</dependency>
-
+    <dependency>
+      <groupId>com.addlive</groupId>
+      <artifactId>android-sdk</artifactId>
+      <version>${addlive.version}</version>
+    </dependency>
 
     <!-- Native extensions -->
-<dependency>
-  <groupId>com.addlive</groupId>
-  <artifactId>libAddLive</artifactId>
-  <version>${addlive.version}</version>
-  <scope>runtime</scope>
-  <type>so</type>
-</dependency>
+    <dependency>
+      <groupId>com.addlive</groupId>
+      <artifactId>libAddLive</artifactId>
+      <version>${addlive.version}</version>
+      <scope>runtime</scope>
+      <type>so</type>
+    </dependency>
 
-<dependency>
-  <groupId>com.addlive</groupId>
-  <artifactId>libwebrtc_voice</artifactId>
-  <version>${addlive.version}</version>
-  <scope>runtime</scope>
-  <type>so</type>
-</dependency>
+    <dependency>
+      <groupId>com.addlive</groupId>
+      <artifactId>libwebrtc_voice</artifactId>
+      <version>${addlive.version}</version>
+      <scope>runtime</scope>
+      <type>so</type>
+    </dependency>
 
-<dependency>
-  <groupId>com.addlive</groupId>
-  <artifactId>libgnustl_shared</artifactId>
-  <version>${addlive.version}</version>
-  <scope>runtime</scope>
-  <type>so</type>
-</dependency>
+    <dependency>
+      <groupId>com.addlive</groupId>
+      <artifactId>libgnustl_shared</artifactId>
+      <version>${addlive.version}</version>
+      <scope>runtime</scope>
+      <type>so</type>
+    </dependency>
 
   </dependencies>
 
   <repositories>
-<repository>
-  <id>addlive-maven-repo</id>
-  <name>Stable Repository</name>
-  <url>http://api.addlive.com/maven</url>
-  <releases>
-    <enabled>true</enabled>
-  </releases>
-  <snapshots>
-    <enabled>false</enabled>
-  </snapshots>
-</repository>
+    <repository>
+      <id>addlive-maven-repo</id>
+      <name>Stable Repository</name>
+      <url>http://api.addlive.com/maven</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
   </repositories>
 </project>

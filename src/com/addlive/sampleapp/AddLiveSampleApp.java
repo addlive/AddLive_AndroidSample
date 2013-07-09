@@ -33,8 +33,10 @@ public class AddLiveSampleApp extends Activity {
    * ===========================================================================
    */
 
-  private static final long CDO_SAMPLES_APP_ID = 1;
-  private static final String CDO_SAMPLES_SECRET = "CloudeoTestAccountSecret";
+  private static final long ADL_APP_ID = -1; // TODO set your app ID here.
+  private static final String ADL_API_KEY = ""; // TODO set you API key here.
+
+
   private static final int STATS_INTERVAL = 2;
   private static final String LOG_TAG = "AddLiveDemo";
 
@@ -274,6 +276,7 @@ public class AddLiveSampleApp extends Activity {
     String storageDir =
         Environment.getExternalStorageDirectory().getAbsolutePath();
     initOptions.setStorageDir(storageDir);
+    Log.d(LOG_TAG, "Initializing the AddLive SDK.");
     ADL.init(listener, initOptions, this);
   }
 
@@ -290,16 +293,19 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   private void onAdlInitialized() {
+    Log.d(LOG_TAG, "AddLive SDK initialized");
     // set service listener, set application id and get version
     ADL.getService().addServiceListener(new ResponderAdapter<Void>(),
         getListener());
 
+    Log.d(LOG_TAG, "Setting application id: " + ADL_APP_ID);
     ADL.getService().setApplicationId(new ResponderAdapter<Void>(),
-        CDO_SAMPLES_APP_ID);
+        ADL_APP_ID);
 
     ADL.getService().getVersion(new UIThreadResponder<String>(this) {
       @Override
       protected void handleResult(String version) {
+        Log.d(LOG_TAG, "AddLive SDK version: " + version);
         TextView versionLabel =
             (TextView) findViewById(R.id.sdk_version_label);
         versionLabel.append(version);
@@ -446,12 +452,12 @@ public class AddLiveSampleApp extends Activity {
 
     StringBuilder signatureBodyBuilder = new StringBuilder();
     signatureBodyBuilder.
-        append(CDO_SAMPLES_APP_ID).
+        append(ADL_APP_ID).
         append("").
         append(currentState.userId).
         append(salt).
         append(expires).
-        append(CDO_SAMPLES_SECRET);
+        append(ADL_API_KEY);
     String signatureBody = signatureBodyBuilder.toString();
     MessageDigest digest;
     String signature = "";
@@ -496,9 +502,10 @@ public class AddLiveSampleApp extends Activity {
     connect.setEnabled(false);
 
     EditText edit = (EditText) findViewById(R.id.edit_url);
-    String url = edit.getText().toString();
+    String scopeId = edit.getText().toString();
 
-    ConnectionDescriptor desc = genConnDescriptor(url);
+    Log.d(LOG_TAG, "Connecting to scope: '" + scopeId + "'");
+    ConnectionDescriptor desc = genConnDescriptor(scopeId);
 
     UIThreadResponder<MediaConnection> connectResponder =
         new UIThreadResponder<MediaConnection>(this) {
@@ -615,6 +622,7 @@ public class AddLiveSampleApp extends Activity {
    */
 
   private void onConnected() {
+    Log.d(LOG_TAG, "Successfully connected to the scope");
     TextView status = (TextView) findViewById(R.id.text_status);
     status.setTextColor(Color.GREEN);
     status.setText("In Call");
@@ -967,7 +975,7 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   private void onAdlUserEvent(UserStateChangedEvent e) {
-    Log.v(LOG_TAG, "onAdlUserEvent: " + e.toString());
+    Log.d(LOG_TAG, "onAdlUserEvent: " + e.toString());
 
     long userId = e.getUserId();
     boolean isConnected = e.isConnected();
@@ -975,6 +983,7 @@ public class AddLiveSampleApp extends Activity {
         findViewById(R.id.main_layout);
 
     if (isConnected) {
+      Log.i(LOG_TAG, "Got new user connected: " + e.getUserId());
       // add downlink stats entry
       LinearLayout.LayoutParams lparams =
           new LinearLayout.LayoutParams(
@@ -1014,7 +1023,7 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   private void onAdlMediaStream(UserStateChangedEvent e) {
-    Log.v(LOG_TAG, "onAdlMediaStream" + e.toString());
+    Log.d(LOG_TAG, "onAdlMediaStream" + e.toString());
 
     if (e.getMediaType() == MediaType.AUDIO)
       onAudioStream(e);
@@ -1097,12 +1106,12 @@ public class AddLiveSampleApp extends Activity {
     authDetails.setExpires(expires);
     StringBuilder signatureBodyBuilder = new StringBuilder();
     signatureBodyBuilder.
-        append(CDO_SAMPLES_APP_ID).
+        append(ADL_APP_ID).
         append(currentState.scopeId).
         append(currentState.userId).
         append(salt).
         append(expires).
-        append(CDO_SAMPLES_SECRET);
+        append(ADL_API_KEY);
     String signatureBody = signatureBodyBuilder.toString();
     MessageDigest digest;
     String signature = "";
@@ -1249,6 +1258,7 @@ public class AddLiveSampleApp extends Activity {
     view.addRenderer(videoSinkId);
 
     long[] users = {userId};
+    Log.d(LOG_TAG, "Calling set allowed senders with remote user id: " + userId);
     ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(),
         currentState.scopeId, users);
   }

@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -35,7 +36,6 @@ public class AddLiveSampleApp extends Activity {
 
   private static final long ADL_APP_ID = -1; // TODO set your app ID here.
   private static final String ADL_API_KEY = ""; // TODO set you API key here.
-
 
   private static final int STATS_INTERVAL = 2;
   private static final String LOG_TAG = "AddLiveDemo";
@@ -164,6 +164,8 @@ public class AddLiveSampleApp extends Activity {
     // local stats view
     TextView stats = (TextView) findViewById(R.id.text_stats);
     userMap.put(-1L, new User("", stats, true));
+
+    setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
 
     initializeActions();
     initializeAddLive();
@@ -1337,7 +1339,13 @@ public class AddLiveSampleApp extends Activity {
 
   private void onHeadphonePlugged(boolean plugged) {
     usesHeadphone = plugged;
+
     updateAECConfiguration();
+
+    AudioManager audioManager = 
+      (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+    
+    audioManager.setSpeakerphoneOn(! plugged);
   }
 
   private void onNetworkChanged(NetworkInfo info) {

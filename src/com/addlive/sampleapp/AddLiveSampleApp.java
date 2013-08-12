@@ -935,6 +935,9 @@ public class AddLiveSampleApp extends Activity {
     String text = "";
 
     if (!user.local) {
+      if (stats.getDirection() == Constants.MediaStatsDirection.UPLINK)
+	  return;
+
       text += "User " + userId + ":";
 
       user.statsView.video =

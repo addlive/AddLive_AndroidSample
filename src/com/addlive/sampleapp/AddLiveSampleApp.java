@@ -278,6 +278,7 @@ public class AddLiveSampleApp extends Activity {
     String storageDir =
         Environment.getExternalStorageDirectory().getAbsolutePath();
     initOptions.setStorageDir(storageDir);
+    initOptions.setApplicationId(ADL_APP_ID);
     Log.d(LOG_TAG, "Initializing the AddLive SDK.");
     ADL.init(listener, initOptions, this);
   }
@@ -299,10 +300,6 @@ public class AddLiveSampleApp extends Activity {
     // set service listener, set application id and get version
     ADL.getService().addServiceListener(new ResponderAdapter<Void>(),
         getListener());
-
-    Log.d(LOG_TAG, "Setting application id: " + ADL_APP_ID);
-    ADL.getService().setApplicationId(new ResponderAdapter<Void>(),
-        ADL_APP_ID);
 
     ADL.getService().getVersion(new UIThreadResponder<String>(this) {
       @Override

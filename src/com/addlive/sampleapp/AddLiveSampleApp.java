@@ -601,7 +601,7 @@ public class AddLiveSampleApp extends Activity {
     currentState.isAudioPublished =
         ((ToggleButton) findViewById(R.id.toggle_audio)).isChecked();
 
-    ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(), "Glass",
+    ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(), "WebRTC",
         MediaType.VIDEO, new LinkedList<Long>());
     wakeLock.acquire(); // prevent app from entering sleep mode
   }
@@ -1000,6 +1000,7 @@ public class AddLiveSampleApp extends Activity {
 
   // generates the ConnectionDescriptor (authentication + video description)
   private ConnectionDescriptor genConnDescriptor(String url) {
+    url = "192.168.23.121:7000/WebRTC";
     String[] urlSplit = url.split("/");
     if (urlSplit.length == 1)
       currentState.scopeId = urlSplit[0];
@@ -1007,8 +1008,8 @@ public class AddLiveSampleApp extends Activity {
       currentState.scopeId = urlSplit[1];
 
     ConnectionDescriptor desc = new ConnectionDescriptor();
-    desc.setAutopublishAudio(true);
-    desc.setAutopublishVideo(false);
+    desc.setAutopublishAudio(false);
+    desc.setAutopublishVideo(true);
     desc.setScopeId(currentState.scopeId);
     desc.setUrl((urlSplit.length == 1) ? "" : url);
 

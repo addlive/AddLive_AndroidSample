@@ -142,8 +142,8 @@
 		    >
 
       <SurfaceView android:id="@+id/local_video"
-             android:layout_width="1dp"
-             android:layout_height="1dp"
+             android:layout_width="60dp"
+             android:layout_height="80dp"
   android:visibility="visible"/>
 
       <ToggleButton
@@ -151,10 +151,11 @@
           android:layout_height="wrap_content"
           android:text="New ToggleButton"
           android:id="@id/toggle_video"
-          android:layout_alignParentRight="true"
-          android:layout_alignParentBottom="true"
           android:textOff="V"
-          android:textOn="V"/>
+          android:textOn="V"
+          android:layout_alignBaseline="@+id/button_connect"
+          android:layout_alignBottom="@+id/button_connect"
+          android:layout_alignParentRight="true"/>
 
       <Button
 	  android:id="@+id/button_disconnect"
@@ -169,8 +170,8 @@
 	  android:visibility="invisible"
 	  android:enabled="false"
     android:textSize="10dp"
-    android:layout_alignParentTop="true"
-    android:layout_toLeftOf="@+id/ti"/>
+    android:layout_alignTop="@+id/toggle_audio"
+    android:layout_toLeftOf="@+id/toggle_audio"/>
 
       <Button
 	  android:id="@+id/button_connect"
@@ -193,10 +194,11 @@
           android:text="New ToggleButton"
           android:textOff="A"
           android:textOn="A"
-          android:layout_alignParentTop="true"
-          android:layout_toLeftOf="@id/toggle_video"
-          android:checked="true"
-          android:id="@+id/toggle_audio"/>
+          android:checked="false"
+          android:id="@+id/toggle_audio"
+          android:layout_alignBaseline="@id/toggle_video"
+          android:layout_alignBottom="@id/toggle_video"
+          android:layout_toLeftOf="@id/toggle_video"/>
 
     </RelativeLayout>
 

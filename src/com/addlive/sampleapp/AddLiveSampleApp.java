@@ -18,6 +18,7 @@ import android.util.Log;
 import android.view.*;
 import android.widget.*;
 import com.addlive.Constants;
+import com.addlive.PropertyNames;
 import com.addlive.platform.*;
 import com.addlive.service.*;
 import com.addlive.service.listener.*;
@@ -40,6 +41,7 @@ public class AddLiveSampleApp extends Activity {
 //  private static final String ADL_API_KEY = "AddLiveSuperSecret";
   private static final int STATS_INTERVAL = 5;
   private static final String LOG_TAG = "AddLiveDemo";
+  private static final String SCOPE_ID = "Glass_v2";
 
   /**
    * ===========================================================================
@@ -137,7 +139,7 @@ public class AddLiveSampleApp extends Activity {
     super.onCreate(savedInstanceState);
 
     setContentView(R.layout.main);
-    setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
     getWindow().setSoftInputMode(
         WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 
@@ -153,15 +155,6 @@ public class AddLiveSampleApp extends Activity {
     registerReceiver(broadcastReceiver,
         new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 
-    // local camera view: camera output is hardcoded to 640x480, size of the
-    // view is reduced
-//    SurfaceView local = (SurfaceView) findViewById(R.id.local_video);
-//    local.setZOrderMediaOverlay(true);
-//    local.setLayoutParams(new RelativeLayout.LayoutParams(480 / 3, 640 / 3));
-
-    // url/scope to connect to
-//    EditText url = (EditText) findViewById(R.id.edit_url);
-//    url.setSelection(url.getText().length());
 
     // local stats view
     TextView stats = (TextView) findViewById(R.id.text_stats);
@@ -338,6 +331,9 @@ public class AddLiveSampleApp extends Activity {
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
         "global.dev.audio.modeNS", "4");
 
+    ADL.getService().setProperty(new ResponderAdapter<Void>(),
+        PropertyNames.CAMERA_MODE, "320x240@5");
+
     // update UI
     runOnUiThread(new Runnable() {
       @Override
@@ -419,13 +415,6 @@ public class AddLiveSampleApp extends Activity {
           }
         });
 
-//    findViewById(R.id.button_logs).
-//        setOnClickListener(new View.OnClickListener() {
-//          @Override
-//          public void onClick(View view) {
-//            onLogsClicked();
-//          }
-//        });
 
     // initialize spinners (selects)
     Spinner ec = (Spinner) findViewById(R.id.spinner_ec);
@@ -459,10 +448,8 @@ public class AddLiveSampleApp extends Activity {
     Button connect = (Button) findViewById(R.id.button_connect);
     connect.setEnabled(false);
 
-//    EditText edit = (EditText) findViewById(R.id.edit_url);
-//    String url = edit.getText().toString();
-
-    ConnectionDescriptor desc = genConnDescriptor("WebRTC");
+    currentState.scopeId = SCOPE_ID;
+    ConnectionDescriptor desc = genConnDescriptor(SCOPE_ID);
 
     UIThreadResponder<MediaConnection> connectResponder =
         new UIThreadResponder<MediaConnection>(this) {
@@ -561,17 +548,6 @@ public class AddLiveSampleApp extends Activity {
     }
   }
 
-  // ===========================================================================
-
-  private void onLogsClicked() {
-    LogsPublisher publisher = new LogsPublisher();
-    List<String> filter = new LinkedList<String>();
-    filter.add("AddLive_SDK:V");
-    filter.add(LOG_TAG + ":V");
-    filter.add("*:S");
-    publisher.run(filter, this);
-  }
-
   /**
    * ===========================================================================
    * AddLive responses
@@ -581,7 +557,7 @@ public class AddLiveSampleApp extends Activity {
   private void onConnected() {
     TextView status = (TextView) findViewById(R.id.text_status);
     status.setTextColor(Color.GREEN);
-    status.setText("In Call");
+    status.setText("Connected to scope " + SCOPE_ID);
 
     Button connect = (Button) findViewById(R.id.button_connect);
     connect.setVisibility(View.GONE);
@@ -601,7 +577,8 @@ public class AddLiveSampleApp extends Activity {
     currentState.isAudioPublished =
         ((ToggleButton) findViewById(R.id.toggle_audio)).isChecked();
 
-    ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(), "WebRTC",
+    ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(),
+        currentState.scopeId,
         MediaType.VIDEO, new LinkedList<Long>());
     wakeLock.acquire(); // prevent app from entering sleep mode
   }
@@ -629,23 +606,12 @@ public class AddLiveSampleApp extends Activity {
       status.setTextColor(Color.YELLOW);
       status.setText(statusText);
     }
-
     Button connect = (Button) findViewById(R.id.button_connect);
     connect.setVisibility(View.VISIBLE);
     connect.setEnabled(true);
-
     Button disconnect = (Button) findViewById(R.id.button_disconnect);
     disconnect.setVisibility(View.GONE);
-
-    clearRemoteUsers();
-
-    // clear remote video renderer
-//    com.addlive.view.VideoView view =
-//        (com.addlive.view.VideoView) findViewById(R.id.remote_video);
-//    view.removeRenderer();
-
     currentState.reset();
-
     wakeLock.release(); // allow app to enter sleep mode
   }
 
@@ -675,14 +641,6 @@ public class AddLiveSampleApp extends Activity {
         Log.v(LOG_TAG, "found front facing camera: " + i);
       }
     }
-
-    ArrayAdapter<String> adapter = new ArrayAdapter<String>(
-        this, android.R.layout.simple_spinner_item, items);
-
-//    Spinner spinner = (Spinner) findViewById(R.id.spinner_camera);
-//    spinner.setOnItemSelectedListener(new CameraSelectionListener(devices));
-//    spinner.setAdapter(adapter);
-//    spinner.setSelection(index); // select front camera if available
 
     // start video preview
     SurfaceView view = (SurfaceView) findViewById(R.id.local_video);
@@ -803,17 +761,6 @@ public class AddLiveSampleApp extends Activity {
   void onAdlVideoFrameSizeChanged(VideoFrameSizeChangedEvent e) {
     Log.v(LOG_TAG, "videoFrameSizeChanged: " + e.getSinkId() +
         " -> " + e.getWidth() + "x" + e.getHeight());
-
-//    if (e.getSinkId().equals(userMap.get(-1L).videoSinkId)) {
-//      SurfaceView view = (SurfaceView) findViewById(R.id.local_video);
-//      view.setLayoutParams(new RelativeLayout.LayoutParams(
-//          e.getWidth() / 3, e.getHeight() / 3));
-//    } else {
-//      com.addlive.view.VideoView view =
-//          (com.addlive.view.VideoView) findViewById(R.id.remote_video);
-//      if (e.getSinkId().equals(view.getSinkId()))
-//        view.resolutionChanged(e.getWidth(), e.getHeight());
-//    }
   }
 
   // ===========================================================================
@@ -1000,7 +947,6 @@ public class AddLiveSampleApp extends Activity {
 
   // generates the ConnectionDescriptor (authentication + video description)
   private ConnectionDescriptor genConnDescriptor(String url) {
-    url = "192.168.23.121:7000/WebRTC";
     String[] urlSplit = url.split("/");
     if (urlSplit.length == 1)
       currentState.scopeId = urlSplit[0];
@@ -1008,8 +954,8 @@ public class AddLiveSampleApp extends Activity {
       currentState.scopeId = urlSplit[1];
 
     ConnectionDescriptor desc = new ConnectionDescriptor();
-    desc.setAutopublishAudio(false);
-    desc.setAutopublishVideo(true);
+    desc.setAutopublishAudio(((ToggleButton) findViewById(R.id.toggle_audio)).isChecked());
+    desc.setAutopublishVideo(((ToggleButton) findViewById(R.id.toggle_video)).isChecked());
     desc.setScopeId(currentState.scopeId);
     desc.setUrl((urlSplit.length == 1) ? "" : url);
 
@@ -1017,7 +963,7 @@ public class AddLiveSampleApp extends Activity {
     VideoStreamDescriptor videoStream = new VideoStreamDescriptor();
     videoStream.setMaxWidth(240);
     videoStream.setMaxHeight(320);
-    videoStream.setMaxFps(10);
+    videoStream.setMaxFps(5);
     videoStream.setUseAdaptation(false);
     desc.setVideoStream(videoStream);
 
@@ -1091,97 +1037,15 @@ public class AddLiveSampleApp extends Activity {
 
   // switch video feed to the next user available
   private boolean renderNextUser() {
-//    com.addlive.view.VideoView view =
-//        (com.addlive.view.VideoView) findViewById(R.id.remote_video);
-//
-//    Iterator<Map.Entry<Long, User>> it = userMap.entrySet().iterator();
-//
-//    while (it.hasNext()) {
-//      Map.Entry<Long, User> e = it.next();
-//      if (e.getValue().local)
-//        continue;
-//
-//      if (e.getValue().videoSinkId.equals(view.getSinkId()))
-//        break;
-//    }
-//
-//    while (it.hasNext()) {
-//      Map.Entry<Long, User> e = it.next();
-//      if (e.getValue().local)
-//        continue;
-//
-//      if (e.getValue().videoSinkId.length() > 0) {
-//        renderUser(e.getKey(), e.getValue().videoSinkId);
-//        return true;
-//      }
-//    }
-//
-//    it = userMap.entrySet().iterator();
-//
-//    while (it.hasNext()) {
-//      Map.Entry<Long, User> e = it.next();
-//      if (e.getValue().local)
-//        continue;
-//
-//      if (e.getValue().videoSinkId.equals(view.getSinkId()))
-//        break;
-//
-//      if (e.getValue().videoSinkId.length() > 0) {
-//        renderUser(e.getKey(), e.getValue().videoSinkId);
-//        return true;
-//      }
-//    }
-
     return false;
   }
 
   // switch video feed to next avail. user or stop remote rendering completely
   private void renderNextUserOrRemove() {
-//    com.addlive.view.VideoView view =
-//        (com.addlive.view.VideoView) findViewById(R.id.remote_video);
-//
-//    for (User user : userMap.values()) {
-//      if (user.videoSinkId.equals(view.getSinkId()))
-//        return;
-//    }
-//
-//    if (renderNextUser())
-//      return;
-//
-//    view.removeRenderer();
   }
 
-  // render given video feed of user if no other is currently beeing renderer
   private void renderUserIfNotBusy(long userId, String videoSinkId) {
-//    com.addlive.view.VideoView view =
-//        (com.addlive.view.VideoView) findViewById(R.id.remote_video);
-//
-//    if (view.getSinkId().length() > 0)
-//      return;
-//
-//    renderUser(userId, videoSinkId);
-  }
 
-  // select rendered user in stats list (on bottom of application),
-  // connect view to given sink (this will start the rendering) and 
-  // tell streamer only to forward given user to us
-  private void renderUser(long userId, String videoSinkId) {
-//    com.addlive.view.VideoView view =
-//        (com.addlive.view.VideoView) findViewById(R.id.remote_video);
-//
-//    for (User user : userMap.values()) {
-//      if (user.videoSinkId.equals(view.getSinkId())) {
-//        user.statsView.view.setBackgroundResource(R.color.black);
-//      }
-//      if (user.videoSinkId.equals(videoSinkId)) {
-//        user.statsView.view.setBackgroundResource(R.color.lightblue);
-//      }
-//    }
-//
-//    view.addRenderer(videoSinkId);
-
-//    ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(),
-//        currentState.scopeId, MediaType.VIDEO, Arrays.asList(userId));
   }
 
   // combine given text with audio and video stats strings

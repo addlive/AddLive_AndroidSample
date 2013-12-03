@@ -5,7 +5,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.addlive</groupId>
-  <artifactId>android-sample-app</artifactId>
+  <artifactId>sample-app</artifactId>
   <packaging>apk</packaging>
   <name>AddLive SDK Sample App</name>
 
@@ -24,7 +24,7 @@
   </dependencyManagement>
 
   <build>
-    <finalName>ADLDemoGlass</finalName>
+    <finalName>GlasslDemo</finalName>
     <sourceDirectory>src</sourceDirectory>
     <plugins>
       <plugin>

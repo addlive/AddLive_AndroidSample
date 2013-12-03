@@ -141,11 +141,6 @@
 		    android:layout_marginBottom="5dip"
 		    >
 
-      <SurfaceView android:id="@+id/local_video"
-             android:layout_width="60dp"
-             android:layout_height="80dp"
-  android:visibility="visible"/>
-
       <ToggleButton
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
@@ -170,8 +165,8 @@
 	  android:visibility="invisible"
 	  android:enabled="false"
     android:textSize="10dp"
-    android:layout_alignTop="@+id/toggle_audio"
-    android:layout_toLeftOf="@+id/toggle_audio"/>
+    android:layout_alignParentTop="true"
+    android:layout_alignParentLeft="true"/>
 
       <Button
 	  android:id="@+id/button_connect"
@@ -186,7 +181,7 @@
 	  android:enabled="false"
     android:textSize="10dp"
     android:layout_alignParentTop="true"
-    android:layout_alignLeft="@+id/button_disconnect"/>
+    android:layout_alignParentLeft="true"/>
 
       <ToggleButton
           android:layout_width="wrap_content"
@@ -199,6 +194,14 @@
           android:layout_alignBaseline="@id/toggle_video"
           android:layout_alignBottom="@id/toggle_video"
           android:layout_toLeftOf="@id/toggle_video"/>
+
+      <SurfaceView android:id="@+id/local_video"
+             android:layout_width="160dp"
+             android:layout_height="120dp"
+  android:visibility="visible"
+  android:layout_gravity="center_horizontal"
+  android:layout_alignParentTop="true"
+  android:layout_toLeftOf="@+id/toggle_audio"/>
 
     </RelativeLayout>
 

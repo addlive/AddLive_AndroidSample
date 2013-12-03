@@ -1,4 +1,4 @@
-package com.addlive.sampleapp;
+package com.addlive.glasssample;
 
 import android.app.Activity;
 import android.graphics.SurfaceTexture;

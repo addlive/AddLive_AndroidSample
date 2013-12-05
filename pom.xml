@@ -11,8 +11,8 @@
 
 
   <properties>
-    <addlive.version>2.0.1.51</addlive.version>
-    <api.level>16</api.level>
+    <addlive.version>3.0.0.10</addlive.version>
+    <api.level>15</api.level>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -86,7 +86,7 @@
     <!-- Native extensions -->
     <dependency>
       <groupId>com.addlive</groupId>
-      <artifactId>libAddLive</artifactId>
+      <artifactId>libAddLive${addlive.version}</artifactId>
       <version>${addlive.version}</version>
       <scope>runtime</scope>
       <type>so</type>

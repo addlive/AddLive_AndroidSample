@@ -35,11 +35,11 @@ public class AddLiveSampleApp extends Activity {
    * ===========================================================================
    */
 
-  private static final long ADL_APP_ID = 2;
-  private static final String ADL_API_KEY = "AddLiveAPIKey_Be3eyOHLkHJGlw37w71XNPVvIk6zHP3giRqX2hVrqXjuOgNJQVLNyyDVqJTMV6wjYQnrnTVcLx9MTJilmGKvLgF2hw1SbtoWBSza";
-//  private static final long ADL_APP_ID = 1;
-//  private static final String ADL_API_KEY = "AddLiveSuperSecret";
-  private static final int STATS_INTERVAL = 5;
+  private static final long ADL_APP_ID = 1; // TODO set your app ID here.
+  private static final String ADL_API_KEY = "AddLiveSuperSecret"; // TODO set you API key here.
+
+
+  private static final int STATS_INTERVAL = 2;
   private static final String LOG_TAG = "AddLiveDemo";
   private static final String SCOPE_ID = "Glass_v2";
 
@@ -276,6 +276,8 @@ public class AddLiveSampleApp extends Activity {
     String storageDir =
         Environment.getExternalStorageDirectory().getAbsolutePath();
     initOptions.setStorageDir(storageDir);
+    initOptions.setApplicationId(ADL_APP_ID);
+    Log.d(LOG_TAG, "Initializing the AddLive SDK.");
     ADL.init(listener, initOptions, this);
   }
 
@@ -292,13 +294,16 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   private void onAdlInitialized() {
+    Log.d(LOG_TAG, "AddLive SDK initialized");
     // set service listener, set application id and get version
     ADL.getService().addServiceListener(new ResponderAdapter<Void>(),
         getListener());
 
+
     ADL.getService().getVersion(new UIThreadResponder<String>(this) {
       @Override
       protected void handleResult(String version) {
+        Log.d(LOG_TAG, "AddLive SDK version: " + version);
         TextView versionLabel =
             (TextView) findViewById(R.id.text_status);
         versionLabel.append(" v" + version);
@@ -312,9 +317,9 @@ public class AddLiveSampleApp extends Activity {
 
     // get all connected video capture devices
     ADL.getService().getVideoCaptureDeviceNames(
-        new UIThreadResponder<Device[]>(this) {
+        new UIThreadResponder<List<Device>>(this) {
           @Override
-          protected void handleResult(Device[] devices) {
+          protected void handleResult(List<Device> devices) {
             onGetVideoCaptureDeviceNames(devices);
           }
 
@@ -558,6 +563,7 @@ public class AddLiveSampleApp extends Activity {
    */
 
   private void onConnected() {
+    Log.d(LOG_TAG, "Successfully connected to the scope");
     TextView status = (TextView) findViewById(R.id.text_status);
     status.setTextColor(Color.GREEN);
     status.setText("Connected to scope " + SCOPE_ID);
@@ -630,25 +636,26 @@ public class AddLiveSampleApp extends Activity {
 
   // ===========================================================================
 
-  private void onGetVideoCaptureDeviceNames(Device[] devices) {
+  private void onGetVideoCaptureDeviceNames(List<Device> devices) {
     int index = 0;
 
     // set camera device names in camera selection spinner
-    String[] items = new String[devices.length];
-    for (int i = 0; i < devices.length; i++) {
-      items[i] = devices[i].getLabel();
-
+    String[] items = new String[devices.size()];
+    int i = 0;
+    for (Device dev : devices) {
+      items[i] = dev.getLabel();
       // look for front camera
       if (items[i].toLowerCase().contains("front")) {
         index = i;
         Log.v(LOG_TAG, "found front facing camera: " + i);
       }
+      i += 1;
     }
 
     // start video preview
     SurfaceView view = (SurfaceView) findViewById(R.id.local_video);
     ADL.getService().setVideoCaptureDevice(new ResponderAdapter<Void>(),
-        devices[index].getId(), view);
+        devices.get(index).getId(), view);
 
 
     ADL.getService().startLocalVideo(new UIThreadResponder<String>(this) {
@@ -762,7 +769,7 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   void onAdlVideoFrameSizeChanged(VideoFrameSizeChangedEvent e) {
-    Log.v(LOG_TAG, "videoFrameSizeChanged: " + e.getSinkId() +
+    Log.w(LOG_TAG, "videoFrameSizeChanged: " + e.getSinkId() +
         " -> " + e.getWidth() + "x" + e.getHeight());
   }
 
@@ -801,14 +808,14 @@ public class AddLiveSampleApp extends Activity {
 
       user.statsView.audio =
           "kbps = " + (8.0 * stats.getBitRate() / 1000.0)
-              + " #Loss = " + stats.getTotalLoss()
-              + " %Loss = " + stats.getLoss();
+              + " | #Loss = " + stats.getTotalLoss()
+              + " | %Loss = " + stats.getLoss();
     } else {
       user.statsView.audio =
           "kbps = " + (8.0 * stats.getBitRate() / 1000.0)
-              + " RTT = " + stats.getRtt()
-              + " #Loss = " + stats.getTotalLoss()
-              + " %Loss = " + stats.getLoss();
+              + " | RTT = " + stats.getRtt()
+              + " | #Loss = " + stats.getTotalLoss()
+              + " | %Loss = " + stats.getLoss();
     }
 
     updateStats(user, text);
@@ -825,19 +832,18 @@ public class AddLiveSampleApp extends Activity {
       text += "User " + userId + ":";
 
       user.statsView.video =
-          "%CPU = " + stats.getTotalCpu()
-              + " kbps = " + (8.0 * stats.getBitRate() / 1000.0)
-              + " #Loss = " + stats.getTotalLoss()
-              + " %Loss = " + stats.getLoss();
-
+          " kbps = " + (8.0 * stats.getBitRate() / 1000.0)
+              + "| #Loss = " + stats.getTotalLoss()
+              + "| %Loss = " + stats.getLoss()
+              + "| img_size = " + stats.getWidth() + " x " + stats.getHeight();
     } else {
       user.statsView.video =
           "%CPU = " + stats.getTotalCpu()
-              + " kbps = " + (8.0 * stats.getBitRate() / 1000.0)
-              + " #Loss = " + stats.getTotalLoss()
-              + " %Loss = " + stats.getLoss()
-              + " QDL = " + stats.getQueueDelay()
-              + " Q = " + stats.getQuality();
+              + "| kbps = " + (8.0 * stats.getBitRate() / 1000.0)
+              + "| #Loss = " + stats.getTotalLoss()
+              + "| %Loss = " + stats.getLoss()
+              + "| QDL = " + stats.getQueueDelay()
+              + "| img_size = " + stats.getWidth() + " x " + stats.getHeight();
     }
 
     updateStats(user, text);
@@ -847,13 +853,13 @@ public class AddLiveSampleApp extends Activity {
 
   private void onAdlMediaConnTypeChanged(MediaConnTypeChangedEvent e) {
     Log.v(LOG_TAG, "MediaConnTypeChanged: " + e.getScopeId() +
-        " -> " + e.getConnectionTypeE().toString());
+        " -> " + e.getConnectionType());
   }
 
   // ===========================================================================
 
   private void onAdlUserEvent(UserStateChangedEvent e) {
-    Log.v(LOG_TAG, "onAdlUserEvent: " + e.toString());
+    Log.d(LOG_TAG, "onAdlUserEvent: " + e.toString());
 
     long userId = e.getUserId();
     boolean isConnected = e.isConnected();
@@ -861,6 +867,7 @@ public class AddLiveSampleApp extends Activity {
         findViewById(R.id.main_layout);
 
     if (isConnected) {
+      Log.i(LOG_TAG, "Got new user connected: " + e.getUserId());
       // add downlink stats entry
       LinearLayout.LayoutParams lparams =
           new LinearLayout.LayoutParams(
@@ -900,7 +907,7 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   private void onAdlMediaStream(UserStateChangedEvent e) {
-    Log.v(LOG_TAG, "onAdlMediaStream" + e.toString());
+    Log.d(LOG_TAG, "onAdlMediaStream" + e.toString());
 
     if (e.getMediaType() == MediaType.AUDIO)
       onAudioStream(e);
@@ -1062,9 +1069,9 @@ public class AddLiveSampleApp extends Activity {
     else
       text += " [no audio]";
     if (user.statsView.video.length() > 0)
-      text += " [V] " + user.statsView.video;
+      text += "\n[V] " + user.statsView.video;
     else
-      text += " [no video]";
+      text += "\n[no video]";
 
     user.statsView.view.setText(text);
   }
@@ -1175,9 +1182,9 @@ public class AddLiveSampleApp extends Activity {
    */
 
   class CameraSelectionListener implements AdapterView.OnItemSelectedListener {
-    private Device[] devices;
+    private List<Device> devices;
 
-    CameraSelectionListener(Device[] devices) {
+    CameraSelectionListener(List<Device> devices) {
       this.devices = devices;
     }
 
@@ -1189,7 +1196,7 @@ public class AddLiveSampleApp extends Activity {
         return;
       }
 
-      String idx = this.devices[position].getId();
+      String idx = this.devices.get(position).getId();
       Log.v(LOG_TAG, "Camera selection: " + position + " (" + idx + ")");
 
       SurfaceView surfaceView = (SurfaceView) findViewById(R.id.local_video);

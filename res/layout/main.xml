@@ -196,8 +196,8 @@
           android:layout_toLeftOf="@id/toggle_video"/>
 
       <SurfaceView android:id="@+id/local_video"
-             android:layout_width="160dp"
-             android:layout_height="120dp"
+             android:layout_width="1dp"
+             android:layout_height="1dp"
   android:visibility="visible"
   android:layout_gravity="center_horizontal"
   android:layout_alignParentTop="true"

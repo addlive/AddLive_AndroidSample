@@ -333,14 +333,14 @@ public class AddLiveSampleApp extends Activity {
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
         "global.dev.audio.enableAEC", "0");
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
-        "global.dev.audio.enableNS", "1");
+        "global.dev.audio.enableNS", "0");
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
         "global.dev.audio.enableAECM", "0");
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
-        "global.dev.audio.modeNS", "4");
+        "global.dev.audio.modeNS", "0");
 
-//    ADL.getService().setProperty(new ResponderAdapter<Void>(),
-//        PropertyNames.CAMERA_MODE, "320x240@5");
+    ADL.getService().setProperty(new ResponderAdapter<Void>(),
+        PropertyNames.CAMERA_MODE, "320x240@5");
 
     // update UI
     runOnUiThread(new Runnable() {
@@ -658,18 +658,18 @@ public class AddLiveSampleApp extends Activity {
         devices.get(index).getId(), view);
 
 
-    ADL.getService().startLocalVideo(new UIThreadResponder<String>(this) {
-      @Override
-      protected void handleResult(String videoSinkId) {
-        Log.e(LOG_TAG, "Local video started");
-        setLocalVideoSink(videoSinkId);
-      }
-
-      @Override
-      protected void handleError(int errCode, String errMessage) {
-        Log.e(LOG_TAG, "Failed to start local video.");
-      }
-    }, view);
+//    ADL.getService().startLocalVideo(new UIThreadResponder<String>(this) {
+//      @Override
+//      protected void handleResult(String videoSinkId) {
+//        Log.e(LOG_TAG, "Local video started");
+//        setLocalVideoSink(videoSinkId);
+//      }
+//
+//      @Override
+//      protected void handleError(int errCode, String errMessage) {
+//        Log.e(LOG_TAG, "Failed to start local video.");
+//      }
+//    }, view);
   }
 
   // ===========================================================================
@@ -977,7 +977,7 @@ public class AddLiveSampleApp extends Activity {
     VideoStreamDescriptor videoStream = new VideoStreamDescriptor();
     videoStream.setMaxWidth(240);
     videoStream.setMaxHeight(320);
-    videoStream.setMaxFps(10);
+    videoStream.setMaxFps(5);
     videoStream.setUseAdaptation(false);
     desc.setVideoStream(videoStream);
 

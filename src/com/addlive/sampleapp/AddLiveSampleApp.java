@@ -35,7 +35,7 @@ public class AddLiveSampleApp extends Activity {
    */
 
   private static final long ADL_APP_ID = 1; // TODO set your app ID here.
-  private static final String ADL_API_KEY = "AddLiveSuperSecret"; // TODO set you API key here.
+  private static final String ADL_API_KEY = ""; // TODO set you API key here.
 
 
   private static final int STATS_INTERVAL = 2;
@@ -749,6 +749,16 @@ public class AddLiveSampleApp extends Activity {
       }
 
       @Override
+      public void onSessionReconnected(final SessionReconnectedEvent e) {
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            onAdlSessionReconnected(e);
+          }
+        });
+      }
+
+      @Override
       public void onUserEvent(final UserStateChangedEvent e) {
         super.onUserEvent(e);
         runOnUiThread(new Runnable() {
@@ -822,6 +832,16 @@ public class AddLiveSampleApp extends Activity {
 
     savedState = new AddLiveState(currentState);
     onDisconnected("");
+  }
+private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
+    Log.v(LOG_TAG, "Session reconnected: " + e.getScopeId());
+
+    TextView status = (TextView) findViewById(R.id.text_status);
+    status.setTextColor(Color.GREEN);
+    status.setText("Reconnected");
+
+    savedState = new AddLiveState(currentState);
+    onConnected();
   }
 
   // ===========================================================================

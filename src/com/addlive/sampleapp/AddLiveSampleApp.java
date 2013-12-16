@@ -276,6 +276,7 @@ public class AddLiveSampleApp extends Activity {
     String storageDir =
         Environment.getExternalStorageDirectory().getAbsolutePath();
     initOptions.setStorageDir(storageDir);
+    initOptions.setApplicationId(ADL_APP_ID);
     Log.d(LOG_TAG, "Initializing the AddLive SDK.");
     ADL.init(listener, initOptions, this);
   }
@@ -297,10 +298,6 @@ public class AddLiveSampleApp extends Activity {
     // set service listener, set application id and get version
     ADL.getService().addServiceListener(new ResponderAdapter<Void>(),
         getListener());
-
-    Log.d(LOG_TAG, "Setting application id: " + ADL_APP_ID);
-    ADL.getService().setApplicationId(new ResponderAdapter<Void>(),
-        ADL_APP_ID);
 
     ADL.getService().getVersion(new UIThreadResponder<String>(this) {
       @Override
@@ -887,7 +884,7 @@ public class AddLiveSampleApp extends Activity {
 
   private void onAdlMediaConnTypeChanged(MediaConnTypeChangedEvent e) {
     Log.d(LOG_TAG, "MediaConnTypeChanged: " + e.getScopeId() +
-        " -> " + e.getConnectionType());
+        " -> " + e.getConnectionTypeE());
   }
 
   // ===========================================================================
@@ -1009,8 +1006,8 @@ public class AddLiveSampleApp extends Activity {
     VideoStreamDescriptor videoStream = new VideoStreamDescriptor();
     videoStream.setMaxWidth(480);
     videoStream.setMaxHeight(640);
-    videoStream.setMaxBitRate(1024);
     videoStream.setMaxFps(15);
+    videoStream.setUseAdaptation(true);
     desc.setVideoStream(videoStream);
 
     // authentication
@@ -1022,15 +1019,8 @@ public class AddLiveSampleApp extends Activity {
     authDetails.setUserId(currentState.userId);
     authDetails.setSalt(salt);
     authDetails.setExpires(expires);
-    StringBuilder signatureBodyBuilder = new StringBuilder();
-    signatureBodyBuilder.
-        append(ADL_APP_ID).
-        append(currentState.scopeId).
-        append(currentState.userId).
-        append(salt).
-        append(expires).
-        append(ADL_API_KEY);
-    String signatureBody = signatureBodyBuilder.toString();
+    String signatureBody = String.valueOf(ADL_APP_ID) + currentState.scopeId +
+        currentState.userId + salt + expires + ADL_API_KEY;
     MessageDigest digest;
     String signature = "";
     try {
@@ -1175,10 +1165,9 @@ public class AddLiveSampleApp extends Activity {
 
     view.addRenderer(videoSinkId);
 
-    long[] users = {userId};
     Log.d(LOG_TAG, "Calling set allowed senders with remote user id: " + userId);
     ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(),
-        currentState.scopeId, users);
+        currentState.scopeId, MediaType.VIDEO, Arrays.asList(userId));
   }
 
   // combine given text with audio and video stats strings

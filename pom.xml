@@ -11,8 +11,8 @@
 
 
   <properties>
-    <addlive.version>2.0.1.51</addlive.version>
-    <api.level>16</api.level>
+    <addlive.version>2.1.7.0</addlive.version>
+    <api.level>15</api.level>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -82,32 +82,6 @@
       <artifactId>android-sdk</artifactId>
       <version>${addlive.version}</version>
     </dependency>
-
-    <!-- Native extensions -->
-    <dependency>
-      <groupId>com.addlive</groupId>
-      <artifactId>libAddLive</artifactId>
-      <version>${addlive.version}</version>
-      <scope>runtime</scope>
-      <type>so</type>
-    </dependency>
-
-    <dependency>
-      <groupId>com.addlive</groupId>
-      <artifactId>libwebrtc_voice</artifactId>
-      <version>${addlive.version}</version>
-      <scope>runtime</scope>
-      <type>so</type>
-    </dependency>
-
-    <dependency>
-      <groupId>com.addlive</groupId>
-      <artifactId>libgnustl_shared</artifactId>
-      <version>${addlive.version}</version>
-      <scope>runtime</scope>
-      <type>so</type>
-    </dependency>
-
   </dependencies>
 
   <repositories>

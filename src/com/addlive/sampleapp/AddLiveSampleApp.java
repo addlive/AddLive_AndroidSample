@@ -34,8 +34,8 @@ public class AddLiveSampleApp extends Activity {
    * ===========================================================================
    */
 
-  private static final long ADL_APP_ID = 1; // TODO set your app ID here.
-  private static final String ADL_API_KEY = "AddLiveSuperSecret"; // TODO set you API key here.
+  private static final long ADL_APP_ID = -1; // TODO set your app ID here.
+  private static final String ADL_API_KEY = ""; // TODO set you API key here.
 
 
   private static final int STATS_INTERVAL = 2;
@@ -318,9 +318,9 @@ public class AddLiveSampleApp extends Activity {
 
     // get all connected video capture devices
     ADL.getService().getVideoCaptureDeviceNames(
-        new UIThreadResponder<List<Device>>(this) {
+        new UIThreadResponder<Device[]>(this) {
           @Override
-          protected void handleResult(List<Device> devices) {
+          protected void handleResult(Device[] devices) {
             onGetVideoCaptureDeviceNames(devices);
           }
 
@@ -635,9 +635,7 @@ public class AddLiveSampleApp extends Activity {
     // clear remote video renderer
     com.addlive.view.VideoView view =
         (com.addlive.view.VideoView) findViewById(R.id.remote_video);
-    view.stop();
-    view.setSinkId("");
-    view.setVisibility(View.INVISIBLE);
+    view.removeRenderer();
 
     currentState.reset();
 
@@ -656,25 +654,24 @@ public class AddLiveSampleApp extends Activity {
 
   // ===========================================================================
 
-  private void onGetVideoCaptureDeviceNames(List<Device> devices) {
+  private void onGetVideoCaptureDeviceNames(Device[] devices) {
     int index = 0;
 
     // set camera device names in camera selection spinner
-    String[] items = new String[devices.size()];
-    int i = 0;
-    for (Device dev : devices) {
-      items[i] = dev.getLabel();
+    String[] items = new String[devices.length];
+    for (int i = 0; i < devices.length; i++) {
+      items[i] = devices[i].getLabel();
+
       // look for front camera
       if (items[i].toLowerCase().contains("front")) {
         index = i;
         Log.v(LOG_TAG, "found front facing camera: " + i);
       }
-      i += 1;
     }
 
     SurfaceView view = (SurfaceView) findViewById(R.id.local_video);
     ADL.getService().setVideoCaptureDevice(new ResponderAdapter<Void>(),
-        devices.get(index).getId(), view);
+        devices[index].getId(), view);
 
     ArrayAdapter<String> adapter = new ArrayAdapter<String>(
         this, android.R.layout.simple_spinner_item, items);
@@ -795,7 +792,7 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   void onAdlVideoFrameSizeChanged(VideoFrameSizeChangedEvent e) {
-    Log.w(LOG_TAG, "videoFrameSizeChanged: " + e.getSinkId() +
+    Log.v(LOG_TAG, "videoFrameSizeChanged: " + e.getSinkId() +
         " -> " + e.getWidth() + "x" + e.getHeight());
 
     if (e.getSinkId().equals(userMap.get(-1L).videoSinkId)) {
@@ -871,16 +868,16 @@ public class AddLiveSampleApp extends Activity {
       user.statsView.video =
           " kbps = " + (8.0 * stats.getBitRate() / 1000.0)
               + "| #Loss = " + stats.getTotalLoss()
-              + "| %Loss = " + stats.getLoss()
-              + "| img_size = " + stats.getWidth() + " x " + stats.getHeight();
+              + "| %Loss = " + stats.getLoss();
+              
     } else {
       user.statsView.video =
           "%CPU = " + stats.getTotalCpu()
               + "| kbps = " + (8.0 * stats.getBitRate() / 1000.0)
               + "| #Loss = " + stats.getTotalLoss()
               + "| %Loss = " + stats.getLoss()
-              + "| QDL = " + stats.getQueueDelay()
-              + "| img_size = " + stats.getWidth() + " x " + stats.getHeight();
+              + "| QDL = " + stats.getQueueDelay();
+     
     }
 
     updateStats(user, text);
@@ -890,7 +887,7 @@ public class AddLiveSampleApp extends Activity {
 
   private void onAdlMediaConnTypeChanged(MediaConnTypeChangedEvent e) {
     Log.d(LOG_TAG, "MediaConnTypeChanged: " + e.getScopeId() +
-        " -> " + e.getConnectionType());
+        " -> " + e.getConnectionTypeE());
   }
 
   // ===========================================================================
@@ -1013,6 +1010,7 @@ public class AddLiveSampleApp extends Activity {
     videoStream.setMaxWidth(480);
     videoStream.setMaxHeight(640);
     videoStream.setMaxFps(15);
+    videoStream.setUseAdaptation(true);
     desc.setVideoStream(videoStream);
 
     // authentication
@@ -1135,11 +1133,10 @@ public class AddLiveSampleApp extends Activity {
         return;
     }
 
-    if (!renderNextUser()) {
-      view.stop();
-      view.setSinkId("");
-      view.setVisibility(View.INVISIBLE);
-    }
+    if (renderNextUser())
+      return;
+
+    view.removeRenderer();
   }
 
   // render given video feed of user if no other is currently beeing renderer
@@ -1169,11 +1166,7 @@ public class AddLiveSampleApp extends Activity {
       }
     }
 
-    Log.e(LOG_TAG, "Changing video renderer to: " + videoSinkId);
-    view.stop();
-    view.setSinkId(videoSinkId);
-    view.start();
-    view.setVisibility(View.VISIBLE);
+    view.addRenderer(videoSinkId);
 
     Log.d(LOG_TAG, "Calling set allowed senders with remote user id: " + userId);
     ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(),
@@ -1300,9 +1293,9 @@ public class AddLiveSampleApp extends Activity {
    */
 
   class CameraSelectionListener implements AdapterView.OnItemSelectedListener {
-    private List<Device> devices;
+    private Device[] devices;
 
-    CameraSelectionListener(List<Device> devices) {
+    CameraSelectionListener(Device[] devices) {
       this.devices = devices;
     }
 
@@ -1314,7 +1307,7 @@ public class AddLiveSampleApp extends Activity {
         return;
       }
 
-      String idx = this.devices.get(position).getId();
+      String idx = this.devices[position].getId();
       Log.v(LOG_TAG, "Camera selection: " + position + " (" + idx + ")");
 
       SurfaceView surfaceView = (SurfaceView) findViewById(R.id.local_video);

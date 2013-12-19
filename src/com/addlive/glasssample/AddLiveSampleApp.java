@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -43,8 +44,14 @@ public class AddLiveSampleApp extends Activity {
   private static final String LOG_TAG = "AddLiveDemo";
   private static final String SCOPE_ID = "Glass_v2";
 
-//  private static final String FIXED_URL = "192.168.23.121:7000/";
+  //  private static final String FIXED_URL = "192.168.23.121:7000/";
   private static final String FIXED_URL = null;
+
+  static {
+    Log.d(LOG_TAG, "Loading camera client");
+//    System.loadLibrary("camera_client");
+
+  }
 
   /**
    * ===========================================================================
@@ -138,7 +145,6 @@ public class AddLiveSampleApp extends Activity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     Log.v(LOG_TAG, "onCreate");
-
     super.onCreate(savedInstanceState);
 
     setContentView(R.layout.main);
@@ -333,14 +339,22 @@ public class AddLiveSampleApp extends Activity {
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
         "global.dev.audio.enableAEC", "0");
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
+        "global.dev.audio.enableAGC", "0");
+    ADL.getService().setProperty(new ResponderAdapter<Void>(),
+        "global.dev.audio.modeAGC", "0");
+    ADL.getService().setProperty(new ResponderAdapter<Void>(),
         "global.dev.audio.enableNS", "0");
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
         "global.dev.audio.enableAECM", "0");
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
+        "global.dev.audio.enableAEC", "0");
+    ADL.getService().setProperty(new ResponderAdapter<Void>(),
         "global.dev.audio.modeNS", "0");
 
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
-        PropertyNames.CAMERA_MODE, "320x240@5");
+        PropertyNames.CAMERA_MODE, "320x240@10");
+    ADL.getService().setProperty(new ResponderAdapter<Void>(),
+        PropertyNames.AUDIO_STREAM, AudioManager.STREAM_VOICE_CALL + "");
 
     // update UI
     runOnUiThread(new Runnable() {
@@ -658,18 +672,18 @@ public class AddLiveSampleApp extends Activity {
         devices.get(index).getId(), view);
 
 
-//    ADL.getService().startLocalVideo(new UIThreadResponder<String>(this) {
-//      @Override
-//      protected void handleResult(String videoSinkId) {
-//        Log.e(LOG_TAG, "Local video started");
-//        setLocalVideoSink(videoSinkId);
-//      }
-//
-//      @Override
-//      protected void handleError(int errCode, String errMessage) {
-//        Log.e(LOG_TAG, "Failed to start local video.");
-//      }
-//    }, view);
+    ADL.getService().startLocalVideo(new UIThreadResponder<String>(this) {
+      @Override
+      protected void handleResult(String videoSinkId) {
+        Log.e(LOG_TAG, "Local video started");
+        setLocalVideoSink(videoSinkId);
+      }
+
+      @Override
+      protected void handleError(int errCode, String errMessage) {
+        Log.e(LOG_TAG, "Failed to start local video.");
+      }
+    }, view);
   }
 
   // ===========================================================================
@@ -968,7 +982,7 @@ public class AddLiveSampleApp extends Activity {
     desc.setAutopublishVideo(((ToggleButton) findViewById(R.id.toggle_video)).isChecked());
     desc.setScopeId(currentState.scopeId);
     //noinspection ConstantConditions
-    if(FIXED_URL != null) {
+    if (FIXED_URL != null) {
       desc.setUrl(FIXED_URL + url);
     }
     desc.setUrl((urlSplit.length == 1) ? "" : url);
@@ -977,7 +991,7 @@ public class AddLiveSampleApp extends Activity {
     VideoStreamDescriptor videoStream = new VideoStreamDescriptor();
     videoStream.setMaxWidth(240);
     videoStream.setMaxHeight(320);
-    videoStream.setMaxFps(5);
+    videoStream.setMaxFps(10);
     videoStream.setUseAdaptation(false);
     desc.setVideoStream(videoStream);
 

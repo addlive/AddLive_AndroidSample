@@ -17,7 +17,6 @@ import android.util.Log;
 import android.view.*;
 import android.widget.*;
 import com.addlive.Constants;
-import com.addlive.PropertyNames;
 import com.addlive.platform.*;
 import com.addlive.service.*;
 import com.addlive.service.listener.*;

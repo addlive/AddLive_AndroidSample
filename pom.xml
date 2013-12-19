@@ -19,7 +19,6 @@
   <version>0.0.0.0</version>
 
   <description>Showcase application for the AddLive Android SDK</description>
-  <dependencyManagement></dependencyManagement>
 
   <build>
     <finalName>addlive-sample</finalName>

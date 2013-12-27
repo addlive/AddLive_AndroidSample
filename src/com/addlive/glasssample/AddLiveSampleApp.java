@@ -37,12 +37,20 @@ public class AddLiveSampleApp extends Activity {
    */
 
   private static final long ADL_APP_ID = 1; // TODO set your app ID here.
-  private static final String ADL_API_KEY = "AddLiveSuperSecret"; // TODO set you API key here.
+  private static final String ADL_API_KEY = ""; // TODO set you API key here.
 
 
   private static final int STATS_INTERVAL = 2;
   private static final String LOG_TAG = "AddLiveDemo";
   private static final String SCOPE_ID = "Glass_v2";
+
+
+
+  private static final int WIDTH = 320;
+  private static final int HEIGHT = 240;
+  private static final int FPS = 10;
+  private static final String CAMERA_CONFIG = WIDTH + "x" + HEIGHT + "@" + FPS;
+
 
   //  private static final String FIXED_URL = "192.168.23.121:7000/";
   private static final String FIXED_URL = null;
@@ -352,7 +360,7 @@ public class AddLiveSampleApp extends Activity {
         "global.dev.audio.modeNS", "0");
 
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
-        PropertyNames.CAMERA_MODE, "320x240@10");
+        PropertyNames.CAMERA_MODE, CAMERA_CONFIG);
     ADL.getService().setProperty(new ResponderAdapter<Void>(),
         PropertyNames.AUDIO_STREAM, AudioManager.STREAM_VOICE_CALL + "");
 
@@ -989,9 +997,9 @@ public class AddLiveSampleApp extends Activity {
 
     // video stream description
     VideoStreamDescriptor videoStream = new VideoStreamDescriptor();
-    videoStream.setMaxWidth(240);
-    videoStream.setMaxHeight(320);
-    videoStream.setMaxFps(10);
+    videoStream.setMaxWidth(HEIGHT);
+    videoStream.setMaxHeight(WIDTH);
+    videoStream.setMaxFps(FPS);
     videoStream.setUseAdaptation(false);
     desc.setVideoStream(videoStream);
 

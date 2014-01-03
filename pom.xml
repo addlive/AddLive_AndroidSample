@@ -11,7 +11,7 @@
 
 
   <properties>
-    <addlive.version>3.0.0.15</addlive.version>
+    <addlive.version>3.0.0.20</addlive.version>
     <api.level>15</api.level>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -84,29 +84,6 @@
     </dependency>
 
     <!-- Native extensions -->
-    <dependency>
-      <groupId>com.addlive</groupId>
-      <artifactId>libAddLive${addlive.version}</artifactId>
-      <version>${addlive.version}</version>
-      <scope>runtime</scope>
-      <type>so</type>
-    </dependency>
-
-    <dependency>
-      <groupId>com.addlive</groupId>
-      <artifactId>libwebrtc_voice</artifactId>
-      <version>${addlive.version}</version>
-      <scope>runtime</scope>
-      <type>so</type>
-    </dependency>
-
-    <dependency>
-      <groupId>com.addlive</groupId>
-      <artifactId>libgnustl_shared</artifactId>
-      <version>${addlive.version}</version>
-      <scope>runtime</scope>
-      <type>so</type>
-    </dependency>
 
   </dependencies>
 

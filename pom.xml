@@ -11,7 +11,7 @@
 
 
   <properties>
-    <addlive.version>2.1.7.0</addlive.version>
+    <addlive.version>3.0.0.31</addlive.version>
     <api.level>15</api.level>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -81,6 +81,9 @@
       <artifactId>android-sdk</artifactId>
       <version>${addlive.version}</version>
     </dependency>
+
+    <!-- Native extensions -->
+
   </dependencies>
 
   <repositories>

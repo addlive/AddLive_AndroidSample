@@ -317,9 +317,9 @@ public class AddLiveSampleApp extends Activity {
 
     // get all connected video capture devices
     ADL.getService().getVideoCaptureDeviceNames(
-        new UIThreadResponder<Device[]>(this) {
+        new UIThreadResponder<List<Device>>(this) {
           @Override
-          protected void handleResult(Device[] devices) {
+          protected void handleResult(List<Device> devices) {
             onGetVideoCaptureDeviceNames(devices);
           }
 
@@ -634,7 +634,7 @@ public class AddLiveSampleApp extends Activity {
     // clear remote video renderer
     com.addlive.view.VideoView view =
         (com.addlive.view.VideoView) findViewById(R.id.remote_video);
-    view.removeRenderer();
+    view.stop();
 
     currentState.reset();
 
@@ -653,24 +653,22 @@ public class AddLiveSampleApp extends Activity {
 
   // ===========================================================================
 
-  private void onGetVideoCaptureDeviceNames(Device[] devices) {
+  private void onGetVideoCaptureDeviceNames(List<Device> devices) {
     int index = 0;
 
     // set camera device names in camera selection spinner
-    String[] items = new String[devices.length];
-    for (int i = 0; i < devices.length; i++) {
-      items[i] = devices[i].getLabel();
-
-      // look for front camera
-      if (items[i].toLowerCase().contains("front")) {
+    int i = 0;
+    for(Device device : devices) {
+      if (device.getId().toLowerCase().contains("front")) {
         index = i;
         Log.v(LOG_TAG, "found front facing camera: " + i);
       }
     }
+    String[] items = new String[devices.size()];
 
     SurfaceView view = (SurfaceView) findViewById(R.id.local_video);
     ADL.getService().setVideoCaptureDevice(new ResponderAdapter<Void>(),
-        devices[index].getId(), view);
+        devices.get(index).getId(), view);
 
     ArrayAdapter<String> adapter = new ArrayAdapter<String>(
         this, android.R.layout.simple_spinner_item, items);
@@ -906,7 +904,7 @@ private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
 
   private void onAdlMediaConnTypeChanged(MediaConnTypeChangedEvent e) {
     Log.d(LOG_TAG, "MediaConnTypeChanged: " + e.getScopeId() +
-        " -> " + e.getConnectionTypeE());
+        " -> " + e.getConnectionType());
   }
 
   // ===========================================================================
@@ -1155,7 +1153,8 @@ private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
     if (renderNextUser())
       return;
 
-    view.removeRenderer();
+    view.stop();
+    view.setSinkId("");
   }
 
   // render given video feed of user if no other is currently beeing renderer
@@ -1185,7 +1184,8 @@ private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
       }
     }
 
-    view.addRenderer(videoSinkId);
+    view.setSinkId(videoSinkId);
+    view.start();
 
     Log.d(LOG_TAG, "Calling set allowed senders with remote user id: " + userId);
     ADL.getService().setAllowedSenders(new ResponderAdapter<Void>(),
@@ -1312,9 +1312,9 @@ private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
    */
 
   class CameraSelectionListener implements AdapterView.OnItemSelectedListener {
-    private Device[] devices;
+    private List<Device> devices;
 
-    CameraSelectionListener(Device[] devices) {
+    CameraSelectionListener(List<Device> devices) {
       this.devices = devices;
     }
 
@@ -1326,7 +1326,7 @@ private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
         return;
       }
 
-      String idx = this.devices[position].getId();
+      String idx = this.devices.get(position).getId();
       Log.v(LOG_TAG, "Camera selection: " + position + " (" + idx + ")");
 
       SurfaceView surfaceView = (SurfaceView) findViewById(R.id.local_video);

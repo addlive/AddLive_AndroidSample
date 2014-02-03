@@ -657,21 +657,17 @@ public class AddLiveSampleApp extends Activity {
     int index = 0;
 
     // set camera device names in camera selection spinner
+    String[] devs = new String[devices.size()];
     int i = 0;
-    for(Device device : devices) {
-      if (device.getId().toLowerCase().contains("front")) {
-        index = i;
-        Log.v(LOG_TAG, "found front facing camera: " + i);
-      }
+    for (Device device : devices) {
+      devs[i++] = device.getLabel();
     }
-    String[] items = new String[devices.size()];
-
     SurfaceView view = (SurfaceView) findViewById(R.id.local_video);
     ADL.getService().setVideoCaptureDevice(new ResponderAdapter<Void>(),
-        devices.get(index).getId(), view);
+        VideoCaptureDevice.FRONT_CAMERA.getId(), view);
 
     ArrayAdapter<String> adapter = new ArrayAdapter<String>(
-        this, android.R.layout.simple_spinner_item, items);
+        this, android.R.layout.simple_spinner_item, devs);
 
     Spinner spinner = (Spinner) findViewById(R.id.spinner_camera);
     spinner.setOnItemSelectedListener(new CameraSelectionListener(devices));
@@ -827,7 +823,8 @@ public class AddLiveSampleApp extends Activity {
     savedState = new AddLiveState(currentState);
     onDisconnected("");
   }
-private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
+
+  private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
     Log.v(LOG_TAG, "Session reconnected: " + e.getScopeId());
 
     TextView status = (TextView) findViewById(R.id.text_status);
@@ -886,7 +883,7 @@ private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
           " kbps = " + (8.0 * stats.getBitRate() / 1000.0)
               + "| #Loss = " + stats.getTotalLoss()
               + "| %Loss = " + stats.getLoss();
-              
+
     } else {
       user.statsView.video =
           "%CPU = " + stats.getTotalCpu()
@@ -894,7 +891,7 @@ private void onAdlSessionReconnected(final SessionReconnectedEvent e) {
               + "| #Loss = " + stats.getTotalLoss()
               + "| %Loss = " + stats.getLoss()
               + "| QDL = " + stats.getQueueDelay();
-     
+
     }
 
     updateStats(user, text);

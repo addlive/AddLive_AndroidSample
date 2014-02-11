@@ -885,12 +885,14 @@ public class AddLiveSampleApp extends Activity {
 
       user.statsView.video =
           " kbps = " + (8.0 * stats.getBitRate() / 1000.0)
+              + "| img = " + stats.getWidth() + "x" + stats.getHeight() + "@" + stats.getFps()
               + "| #Loss = " + stats.getTotalLoss()
               + "| %Loss = " + stats.getLoss();
 
     } else {
       user.statsView.video =
           "%CPU = " + stats.getTotalCpu()
+              + "| img = " + stats.getWidth() + "x" + stats.getHeight() + "@" + stats.getFps()
               + "| kbps = " + (8.0 * stats.getBitRate() / 1000.0)
               + "| #Loss = " + stats.getTotalLoss()
               + "| %Loss = " + stats.getLoss()

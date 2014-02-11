@@ -635,6 +635,10 @@ public class AddLiveSampleApp extends Activity {
     com.addlive.view.VideoView view =
         (com.addlive.view.VideoView) findViewById(R.id.remote_video);
     view.stop();
+    view.setSinkId("");
+    User localUser = userMap.get(-1L);
+    userMap.clear();
+    userMap.put(-1L, localUser);
 
     currentState.reset();
 
@@ -1141,28 +1145,39 @@ public class AddLiveSampleApp extends Activity {
   private void renderNextUserOrRemove() {
     com.addlive.view.VideoView view =
         (com.addlive.view.VideoView) findViewById(R.id.remote_video);
+    Log.i(LOG_TAG, "Rendering next user's video or removing the renderer");
 
     for (User user : userMap.values()) {
-      if (user.videoSinkId.equals(view.getSinkId()))
+      if (user.videoSinkId.equals(view.getSinkId())) {
+        Log.i(LOG_TAG, "The renderer is busy with other user's video. Skipping");
         return;
+      }
     }
 
-    if (renderNextUser())
+    if (renderNextUser()) {
+      Log.i(LOG_TAG, "Next user's video was rendered");
       return;
+    }
 
+    Log.i(LOG_TAG, "There is no remote user video. Clearing the video view");
     view.stop();
     view.setSinkId("");
   }
 
   // render given video feed of user if no other is currently beeing renderer
   private void renderUserIfNotBusy(long userId, String videoSinkId) {
+    Log.i(LOG_TAG, "Got a call to maybe render " +
+        "video from user: " + userId + ". Sink id: " + videoSinkId);
     com.addlive.view.VideoView view =
         (com.addlive.view.VideoView) findViewById(R.id.remote_video);
 
-    if (view.getSinkId().length() > 0)
-      return;
+    if (view.getSinkId().length() > 0) {
+      Log.i(LOG_TAG, "The video view is in use. Video won't be rendered");
+    } else {
+      renderUser(userId, videoSinkId);
+    }
 
-    renderUser(userId, videoSinkId);
+
   }
 
   // select rendered user in stats list (on bottom of application),
@@ -1181,6 +1196,7 @@ public class AddLiveSampleApp extends Activity {
       }
     }
 
+    view.stop();
     view.setSinkId(videoSinkId);
     view.start();
 

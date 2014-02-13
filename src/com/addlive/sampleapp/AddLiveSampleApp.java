@@ -658,8 +658,6 @@ public class AddLiveSampleApp extends Activity {
   // ===========================================================================
 
   private void onGetVideoCaptureDeviceNames(List<Device> devices) {
-    int index = 0;
-
     // set camera device names in camera selection spinner
     String[] devs = new String[devices.size()];
     int i = 0;
@@ -676,7 +674,9 @@ public class AddLiveSampleApp extends Activity {
     Spinner spinner = (Spinner) findViewById(R.id.spinner_camera);
     spinner.setOnItemSelectedListener(new CameraSelectionListener(devices));
     spinner.setAdapter(adapter);
-    spinner.setSelection(index); // select front camera if available
+    int frontCameraSpinnerIndex = ((ArrayAdapter<CharSequence>)spinner.getAdapter())
+        .getPosition("Front Camera") == 1 ? 1 : 0;
+    spinner.setSelection(frontCameraSpinnerIndex); // select front camera if available
 
     // start video preview
     ADL.getService().startLocalVideo(new UIThreadResponder<String>(this) {
